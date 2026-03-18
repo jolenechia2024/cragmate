@@ -128,7 +128,7 @@ export default function GymDashboard() {
 
                   return (
                     <div key={gym.id} className="rounded-xl border border-border p-4 bg-card/30">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="min-w-0">
                           <p className="font-display uppercase tracking-wider text-base sm:text-lg truncate">
                             {gym.name}
@@ -148,14 +148,18 @@ export default function GymDashboard() {
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-2 shrink-0">
+                        <div className="flex flex-col sm:items-end gap-2 shrink-0 w-full sm:w-auto">
                           {gym.website && (
-                            <Button variant="outline" onClick={() => window.open(gym.website, "_blank")}>
+                            <Button
+                              className="w-full sm:w-auto"
+                              variant="outline"
+                              onClick={() => window.open(gym.website, "_blank")}
+                            >
                               Website <ExternalLink className="w-4 h-4 ml-2" />
                             </Button>
                           )}
                           {checkUrl && (
-                            <Button onClick={() => window.open(checkUrl, "_blank")}>
+                            <Button className="w-full sm:w-auto" onClick={() => window.open(checkUrl, "_blank")}>
                               Check routeset <Calendar className="w-4 h-4 ml-2" />
                             </Button>
                           )}

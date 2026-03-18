@@ -179,10 +179,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex gap-2 flex-nowrap">
             {!user ? (
               <Button
                 variant="outline"
+                className="flex-1 whitespace-nowrap px-3"
                 onClick={() => {
                   setAuthMode("login");
                   setAuthOpen(true);
@@ -191,17 +192,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   }
                 }}
               >
-                <LogIn className="w-4 h-4 mr-2" />
-                Login
+                <LogIn className="w-4 h-4 mr-2 shrink-0" />
+                <span className="text-sm">Login</span>
               </Button>
             ) : (
-              <Button variant="outline" className="flex-1" onClick={() => signOut()}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
+              <Button variant="outline" className="flex-1 whitespace-nowrap px-3" onClick={() => signOut()}>
+                <LogOut className="w-4 h-4 mr-2 shrink-0" />
+                <span className="text-sm">Logout</span>
               </Button>
             )}
             <Button
               variant="outline"
+              className="flex-1 whitespace-nowrap px-3"
               onClick={() => {
                 setAuthMode("signup");
                 setAuthOpen(true);
@@ -211,8 +213,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               }}
               disabled={Boolean(user)}
             >
-              <UserIcon className="w-4 h-4 mr-2" />
-              Sign Up
+              <UserIcon className="w-4 h-4 mr-2 shrink-0" />
+              <span className="text-sm">Sign Up</span>
             </Button>
           </div>
           {!isConfigured && (

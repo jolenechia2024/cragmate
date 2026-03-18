@@ -271,8 +271,8 @@ export default function GradeConverter() {
   return (
     <Layout>
       <div className="mb-8">
-        <h1 className="text-5xl font-display uppercase tracking-widest mb-2">Grade Converter</h1>
-        <p className="text-muted-foreground text-lg">
+        <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Grade Converter</h1>
+        <p className="text-muted-foreground text-base sm:text-lg">
           Convert V-scale to local gym grading systems.
         </p>
       </div>
@@ -309,74 +309,150 @@ export default function GradeConverter() {
       </Card>
 
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-        <div className="grid grid-cols-3 bg-teal-950/20 border-b border-border p-4">
-          <div className="font-display text-xl tracking-wider text-muted-foreground uppercase">V-Scale</div>
-          <div className="font-display text-xl tracking-wider text-muted-foreground uppercase">{selectedGymSystem}</div>
-          <div className="font-display text-xl tracking-wider text-muted-foreground uppercase">Experience</div>
+        {/* Desktop/tablet grid */}
+        <div className="hidden sm:block">
+          <div className="grid grid-cols-3 bg-teal-950/20 border-b border-border p-4">
+            <div className="font-display text-xl tracking-wider text-muted-foreground uppercase">V-Scale</div>
+            <div className="font-display text-xl tracking-wider text-muted-foreground uppercase">{selectedGymSystem}</div>
+            <div className="font-display text-xl tracking-wider text-muted-foreground uppercase">Experience</div>
+          </div>
+          <div className="divide-y divide-border">
+            {filteredGrades.map((grade) => (
+              <div
+                key={grade.v}
+                onClick={() => setSelectedGrade(selectedGrade === grade.v ? null : grade.v)}
+                className={cn(
+                  "grid grid-cols-3 p-4 items-center transition-all duration-300 cursor-pointer relative",
+                  selectedGrade === grade.v
+                    ? "bg-primary/10 border-l-4 border-l-primary z-10"
+                    : "hover:bg-accent/50 border-l-4 border-l-transparent",
+                  search && "bg-primary/5",
+                )}
+              >
+                {selectedGrade === grade.v && (
+                  <motion.div
+                    layoutId="gradeHighlight"
+                    className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none"
+                  />
+                )}
+                <div
+                  className={cn(
+                    "text-2xl font-bold transition-colors relative z-10",
+                    selectedGrade === grade.v ? "text-primary" : "",
+                  )}
+                >
+                  {grade.v}
+                </div>
+                <div className="relative z-10 justify-self-end">
+                  {(() => {
+                    const gymGrade = getGymGrade(selectedGymSystem, grade);
+                    const theme = shouldUseNeutralChip(selectedGymSystem, gymGrade)
+                      ? { hue: "bg-muted/40 border border-border", text: "text-foreground" }
+                      : getGymGradeTheme(selectedGymSystem, gymGrade);
+                    return (
+                      <span
+                        className={cn(
+                          "inline-flex items-center justify-center min-w-[5rem] px-4 py-1.5 rounded-md font-bold tracking-wider uppercase text-sm shadow-sm",
+                          theme.hue,
+                          theme.text,
+                          selectedGrade === grade.v ? "scale-105 transition-transform" : "transition-transform",
+                        )}
+                        title={gymGrade ?? "No mapping available"}
+                      >
+                        {gymGrade ?? "—"}
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="relative z-10 justify-self-end">
+                  {(() => {
+                    const exp = getExperienceBand(grade.v);
+                    return (
+                      <span
+                        className={cn(
+                          "inline-flex flex-col items-end gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold",
+                          exp.hue,
+                          exp.text,
+                          "shadow-sm",
+                        )}
+                        title={exp.sub}
+                      >
+                        <span className="uppercase tracking-wider">{exp.label}</span>
+                        <span className="opacity-80 font-medium normal-case">{exp.sub}</span>
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+            ))}
+            {filteredGrades.length === 0 && (
+              <div className="p-12 text-center text-muted-foreground">No matching grades found.</div>
+            )}
+          </div>
         </div>
-        <div className="divide-y divide-border">
-          {filteredGrades.map((grade) => (
-            <div 
-              key={grade.v} 
-              onClick={() => setSelectedGrade(selectedGrade === grade.v ? null : grade.v)}
-              className={cn(
-                "grid grid-cols-3 p-4 items-center transition-all duration-300 cursor-pointer relative",
-                selectedGrade === grade.v 
-                  ? "bg-primary/10 border-l-4 border-l-primary z-10" 
-                  : "hover:bg-accent/50 border-l-4 border-l-transparent",
-                search && 'bg-primary/5'
-              )}
-            >
-              {selectedGrade === grade.v && (
-                <motion.div layoutId="gradeHighlight" className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none" />
-              )}
-              <div className={cn("text-2xl font-bold transition-colors relative z-10", selectedGrade === grade.v ? "text-primary" : "")}>{grade.v}</div>
-              <div className="relative z-10 justify-self-end">
-                {(() => {
-                  const gymGrade = getGymGrade(selectedGymSystem, grade);
-                  const theme = shouldUseNeutralChip(selectedGymSystem, gymGrade)
-                    ? { hue: "bg-muted/40 border border-border", text: "text-foreground" }
-                    : getGymGradeTheme(selectedGymSystem, gymGrade);
-                  return (
-                    <span
-                      className={cn(
-                        "inline-flex items-center justify-center min-w-[5rem] px-4 py-1.5 rounded-md font-bold tracking-wider uppercase text-sm shadow-sm",
-                        theme.hue,
-                        theme.text,
-                        selectedGrade === grade.v ? "scale-105 transition-transform" : "transition-transform",
-                      )}
-                      title={gymGrade ?? "No mapping available"}
-                    >
-                      {gymGrade ?? "—"}
-                    </span>
-                  );
-                })()}
-              </div>
-              <div className="relative z-10 justify-self-end">
-                {(() => {
-                  const exp = getExperienceBand(grade.v);
-                  return (
-                    <span
-                      className={cn(
-                        "inline-flex flex-col items-end gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold",
-                        exp.hue,
-                        exp.text,
-                        "shadow-sm",
-                      )}
-                      title={exp.sub}
-                    >
-                      <span className="uppercase tracking-wider">{exp.label}</span>
-                      <span className="opacity-80 font-medium normal-case">{exp.sub}</span>
-                    </span>
-                  );
-                })()}
-              </div>
-            </div>
-          ))}
+
+        {/* Mobile stacked cards */}
+        <div className="sm:hidden divide-y divide-border">
+          {filteredGrades.map((grade) => {
+            const gymGrade = getGymGrade(selectedGymSystem, grade);
+            const exp = getExperienceBand(grade.v);
+            const theme = shouldUseNeutralChip(selectedGymSystem, gymGrade)
+              ? { hue: "bg-muted/40 border border-border", text: "text-foreground" }
+              : getGymGradeTheme(selectedGymSystem, gymGrade);
+
+            const open = selectedGrade === grade.v;
+
+            return (
+              <button
+                type="button"
+                key={grade.v}
+                onClick={() => setSelectedGrade(open ? null : grade.v)}
+                className={cn(
+                  "w-full text-left p-4 transition-colors",
+                  open ? "bg-primary/10" : "hover:bg-accent/40",
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="font-display text-2xl tracking-wider uppercase">
+                    <span className={cn(open ? "text-primary" : "text-foreground")}>{grade.v}</span>
+                    <span className="text-xs text-muted-foreground ml-2 align-middle">V-Scale</span>
+                  </div>
+                  <span
+                    className={cn(
+                      "inline-flex items-center justify-center px-3 py-1.5 rounded-md font-bold tracking-wider uppercase text-xs shadow-sm shrink-0",
+                      theme.hue,
+                      theme.text,
+                    )}
+                    title={gymGrade ?? "No mapping available"}
+                  >
+                    {selectedGymSystem}: {gymGrade ?? "—"}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex items-start justify-between gap-3">
+                  <span
+                    className={cn(
+                      "inline-flex flex-col items-start gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold",
+                      exp.hue,
+                      exp.text,
+                      "shadow-sm",
+                    )}
+                    title={exp.sub}
+                  >
+                    <span className="uppercase tracking-wider">{exp.label}</span>
+                    <span className="opacity-80 font-medium normal-case">{exp.sub}</span>
+                  </span>
+
+                  <span className="text-xs text-muted-foreground">
+                    Tap to {open ? "collapse" : "expand"}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+
           {filteredGrades.length === 0 && (
-            <div className="p-12 text-center text-muted-foreground">
-              No matching grades found.
-            </div>
+            <div className="p-10 text-center text-muted-foreground">No matching grades found.</div>
           )}
         </div>
       </div>
