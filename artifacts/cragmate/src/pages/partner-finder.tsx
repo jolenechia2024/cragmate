@@ -39,7 +39,8 @@ type ConversationMessage = {
 
 export default function PartnerFinder() {
   const queryClient = useQueryClient();
-  const { userId, user } = useAuth();
+  const { userId, user, session } = useAuth();
+  const accessToken = session?.access_token;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activePostId, setActivePostId] = useState<number | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
@@ -76,7 +77,10 @@ export default function PartnerFinder() {
     mutationFn: async (vars: { postId: number; otherUserId: string; otherUserName: string }) => {
       const res = await fetch(`/api/conversations`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           postId: vars.postId,
           memberA: { userId, userName: user?.email?.split("@")[0] ?? "Guest Climber" },
@@ -100,6 +104,11 @@ export default function PartnerFinder() {
     queryFn: async () => {
       const res = await fetch(
         `/api/conversations/${activeConversationId}/messages?userId=${encodeURIComponent(userId)}`,
+        {
+          headers: {
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+        },
       );
       if (!res.ok) {
         const data = await res.json().catch(() => null);
@@ -113,7 +122,10 @@ export default function PartnerFinder() {
     mutationFn: async (vars: { conversationId: number; body: string }) => {
       const res = await fetch(`/api/conversations/${vars.conversationId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           senderId: userId,
           senderName: user?.email?.split("@")[0] ?? "Guest Climber",

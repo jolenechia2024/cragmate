@@ -319,20 +319,6 @@ const gyms = [
     description: "Affordable old-school bouldering gym near Little India. Overhangs, roofs and beginner-friendly routes. First-timer rate $10 inclusive of shoe rental. Private coaching for kids and adults.",
   },
 
-  // --- b8a ---
-  {
-    name: "b8a Climbing Gym",
-    location: "#03-06, 6 Tampines Street 92, yo:HA Commercial, Singapore 528893",
-    nearestMrt: "Tampines",
-    dayPassPrice: "22.00",
-    membershipPrice: null,
-    openingHours: "Weekdays 12pm–10:30pm | Sat 10am–6pm | Sun & PH 10am–8pm",
-    routeSetDay: "Regular",
-    gradeSystem: "V-scale",
-    website: "https://www.b8a.sg",
-    description: "Bouldering-only gym with a striking design. Singapore's only Grasshopper Board. Off-peak discount available (12pm–6pm weekdays). Under-21 pass at $15.",
-  },
-
   // --- PROJECT SEND ---
   {
     name: "Project Send",
@@ -357,23 +343,10 @@ const gyms = [
     openingHours: "Mon–Fri 12pm–10pm | Weekends 9am–8pm",
     routeSetDay: "Regular",
     gradeSystem: "V-scale",
-    website: "https://zvertigoclimbing.com",
+    website: "https://zvertigobouldergym.wixsite.com/zvert",
     description: "Compact gym known for harder, technical problems. Great value at $18. Located in Bukit Timah Shopping Centre — convenient for west-side climbers.",
   },
 
-  // --- BORUDA ---
-  {
-    name: "boruda Climbing",
-    location: "27 Tai Seng Street, #01-02, Singapore 534023",
-    nearestMrt: "Tai Seng",
-    dayPassPrice: "28.00",
-    membershipPrice: null,
-    openingHours: "Mon 5pm–10pm | Tue–Fri 12pm–10pm | Weekends 10am–8pm",
-    routeSetDay: "Weekly",
-    gradeSystem: "V-scale",
-    website: "https://borudaclimbing.com",
-    description: "Premium bouldering gym affiliated with Boulder Planet and Malaysia's Bump Bouldering. Thoughtful route-setting with a focus on movement quality. Cross-access with affiliated gyms.",
-  },
 ];
 
 async function main() {

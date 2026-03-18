@@ -10,6 +10,7 @@ import {
 } from "@workspace/db";
 import { and, eq, desc } from "drizzle-orm";
 import { CreatePartnerPostBody } from "@workspace/api-zod";
+import requireSupabaseAuth from "../middlewares/requireSupabaseAuth";
 
 const router: IRouter = Router();
 
@@ -150,10 +151,9 @@ router.post("/partner-posts/:id/messages", async (req, res) => {
   }
 });
 
-router.get("/inbox", async (req, res) => {
+router.get("/inbox", requireSupabaseAuth, async (req, res) => {
   try {
-    const userId = typeof req.query.userId === "string" ? req.query.userId : "";
-    if (!userId) return res.status(400).json({ error: "userId is required" });
+    const userId = (req as any).authUserId as string;
 
     const memberships = await db
       .select()
@@ -222,8 +222,9 @@ router.get("/inbox", async (req, res) => {
   }
 });
 
-router.post("/conversations", async (req, res) => {
+router.post("/conversations", requireSupabaseAuth, async (req, res) => {
   try {
+    const authUserId = (req as any).authUserId as string;
     const { postId, memberA, memberB } = req.body ?? {};
     const aId = memberA?.userId as string | undefined;
     const aName = memberA?.userName as string | undefined;
@@ -233,6 +234,10 @@ router.post("/conversations", async (req, res) => {
     if (!aId || !aName || !bId || !bName) {
       return res.status(400).json({ error: "Invalid members" });
     }
+
+    // Privacy: the caller must be the "memberA" from the request.
+    // (Frontend sends the currently logged-in user as memberA.)
+    if (authUserId !== aId) return res.status(403).json({ error: "Forbidden" });
 
     // Try to find an existing conversation with the same members + same postId (if provided)
     const aMemberships = await db
@@ -286,11 +291,16 @@ router.post("/conversations", async (req, res) => {
   }
 });
 
-router.get("/conversations/:id/messages", async (req, res) => {
+router.get("/conversations/:id/messages", requireSupabaseAuth, async (req, res) => {
   try {
-    const conversationId = parseInt(req.params.id);
-    const userId = typeof req.query.userId === "string" ? req.query.userId : "";
-    if (!userId) return res.status(400).json({ error: "userId is required" });
+    const rawConversationId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+    const conversationId = parseInt(rawConversationId, 10);
+    if (Number.isNaN(conversationId)) {
+      return res.status(400).json({ error: "Invalid conversation id" });
+    }
+    const userId = (req as any).authUserId as string;
 
     const member = await db
       .select()
@@ -326,13 +336,23 @@ router.get("/conversations/:id/messages", async (req, res) => {
   }
 });
 
-router.post("/conversations/:id/messages", async (req, res) => {
+router.post("/conversations/:id/messages", requireSupabaseAuth, async (req, res) => {
   try {
-    const conversationId = parseInt(req.params.id);
+    const authUserId = (req as any).authUserId as string;
+    const rawConversationId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+    const conversationId = parseInt(rawConversationId, 10);
+    if (Number.isNaN(conversationId)) {
+      return res.status(400).json({ error: "Invalid conversation id" });
+    }
     const { senderId, senderName, body } = req.body ?? {};
     if (!senderId || !senderName || !body || typeof body !== "string") {
       return res.status(400).json({ error: "Invalid message body" });
     }
+
+    // Privacy: don't allow sending as another user.
+    if (senderId !== authUserId) return res.status(403).json({ error: "Forbidden" });
 
     const member = await db
       .select()
@@ -348,7 +368,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
 
     const [msg] = await db
       .insert(conversationMessagesTable)
-      .values({ conversationId, senderId, senderName, body })
+      .values({ conversationId, senderId: authUserId, senderName, body })
       .returning();
 
     return res.status(201).json({

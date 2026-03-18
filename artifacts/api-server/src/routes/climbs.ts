@@ -5,13 +5,9 @@ import { CreateClimbBody } from "@workspace/api-zod";
 import requireSupabaseAuth from "../middlewares/requireSupabaseAuth";
 
 const router: IRouter = Router();
-
-// Climbs are part of session logs, so require auth.
-router.use(requireSupabaseAuth);
-
-router.get("/sessions/:sessionId/climbs", async (req, res) => {
+router.get("/sessions/:sessionId/climbs", requireSupabaseAuth, async (req, res) => {
   try {
-    const sessionId = parseInt(req.params.sessionId);
+    const sessionId = parseInt(req.params.sessionId as string);
     const userId = (req as any).authUserId as string;
     const climbs = await db
       .select({
@@ -51,9 +47,9 @@ router.get("/sessions/:sessionId/climbs", async (req, res) => {
   }
 });
 
-router.post("/sessions/:sessionId/climbs", async (req, res) => {
+router.post("/sessions/:sessionId/climbs", requireSupabaseAuth, async (req, res) => {
   try {
-    const sessionId = parseInt(req.params.sessionId);
+    const sessionId = parseInt(req.params.sessionId as string);
     const userId = (req as any).authUserId as string;
     const body = CreateClimbBody.parse(req.body);
 
@@ -94,9 +90,9 @@ router.post("/sessions/:sessionId/climbs", async (req, res) => {
   }
 });
 
-router.delete("/climbs/:id", async (req, res) => {
+router.delete("/climbs/:id", requireSupabaseAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const userId = (req as any).authUserId as string;
 
     const rows = await db

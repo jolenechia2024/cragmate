@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed-gyms": "tsx ./src/seed-gyms.ts",
+    "remove-gyms": "tsx ./src/remove-gyms.ts",
     "sync-gym-metadata": "tsx ./src/sync-gym-metadata.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

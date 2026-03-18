@@ -6,9 +6,6 @@ import requireSupabaseAuth from "../middlewares/requireSupabaseAuth";
 
 const router: IRouter = Router();
 
-// Sessions/progress are private to the signed-in Supabase user.
-router.use(requireSupabaseAuth);
-
 const GRADE_ORDER = [
   "VB", "V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9",
   "V10", "V11", "V12", "V13", "V14", "V15", "V16", "V17",
@@ -23,7 +20,7 @@ function gradeNumeric(grade: string): number {
   return -1;
 }
 
-router.get("/sessions", async (req, res) => {
+router.get("/sessions", requireSupabaseAuth, async (req, res) => {
   try {
     const userId = (req as any).authUserId as string;
 
@@ -71,7 +68,7 @@ router.get("/sessions", async (req, res) => {
   }
 });
 
-router.post("/sessions", async (req, res) => {
+router.post("/sessions", requireSupabaseAuth, async (req, res) => {
   try {
     const body = CreateSessionBody.parse(req.body);
     const userId = (req as any).authUserId as string;
@@ -108,9 +105,9 @@ router.post("/sessions", async (req, res) => {
   }
 });
 
-router.get("/sessions/:id", async (req, res) => {
+router.get("/sessions/:id", requireSupabaseAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const userId = (req as any).authUserId as string;
     const rows = await db
       .select({ session: sessionsTable, gymName: gymsTable.name })
@@ -163,9 +160,9 @@ router.get("/sessions/:id", async (req, res) => {
   }
 });
 
-router.delete("/sessions/:id", async (req, res) => {
+router.delete("/sessions/:id", requireSupabaseAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const userId = (req as any).authUserId as string;
 
     const rows = await db
@@ -187,7 +184,7 @@ router.delete("/sessions/:id", async (req, res) => {
   }
 });
 
-router.get("/stats", async (req, res) => {
+router.get("/stats", requireSupabaseAuth, async (req, res) => {
   try {
     const userId = (req as any).authUserId as string;
 
