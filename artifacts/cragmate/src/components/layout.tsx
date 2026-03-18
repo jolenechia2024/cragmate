@@ -149,6 +149,84 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   />
                 ))}
               </div>
+
+              {/* Mobile Auth / User */}
+              <div className="mt-auto pt-6 border-t border-border">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-display text-xl text-foreground group relative overflow-hidden">
+                    <span className="relative z-10">{initials}</span>
+                    <div className="absolute inset-0 bg-primary/20 scale-0 group-hover:scale-100 transition-transform rounded-full" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-foreground truncate">{displayName}</p>
+                    <p className="text-[11px] uppercase tracking-wider text-primary/80">
+                      {user ? "Signed in" : "Guest mode"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex gap-2 flex-nowrap">
+                  {!user ? (
+                    <Button
+                      variant="outline"
+                      className="flex-1 whitespace-nowrap px-2"
+                      onClick={() => {
+                        setAuthMode("login");
+                        setAuthOpen(true);
+                        setMobileOpen(false);
+                        if (!isConfigured) {
+                          setAuthError(
+                            "Auth not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in artifacts/cragmate/.env then restart the web dev server.",
+                          );
+                        }
+                      }}
+                    >
+                      <LogIn className="w-4 h-4 mr-1 shrink-0" />
+                      <span className="text-sm">Login</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="flex-1 whitespace-nowrap px-2"
+                      onClick={() => {
+                        signOut();
+                        setMobileOpen(false);
+                      }}
+                    >
+                      <LogOut className="w-4 h-4 mr-1 shrink-0" />
+                      <span className="text-sm">Logout</span>
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    className="flex-1 whitespace-nowrap px-2"
+                    onClick={() => {
+                      setAuthMode("signup");
+                      setAuthOpen(true);
+                      setMobileOpen(false);
+                      if (!isConfigured) {
+                        setAuthError(
+                          "Auth not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in artifacts/cragmate/.env then restart the web dev server.",
+                        );
+                      }
+                    }}
+                    disabled={Boolean(user)}
+                  >
+                    <UserIcon className="w-4 h-4 mr-1 shrink-0" />
+                    <span className="text-sm">Sign Up</span>
+                  </Button>
+                </div>
+
+                {!isConfigured && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Enable auth by adding{" "}
+                    <span className="font-mono">VITE_SUPABASE_URL</span> and{" "}
+                    <span className="font-mono">VITE_SUPABASE_ANON_KEY</span> to{" "}
+                    <span className="font-mono">artifacts/cragmate/.env</span>, then restart Vite.
+                  </p>
+                )}
+              </div>
             </motion.div>
           </>
         )}
