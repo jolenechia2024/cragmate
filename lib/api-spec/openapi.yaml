@@ -1,0 +1,556 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: CragMate API - Climbing tracker and community platform
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: gyms
+    description: Gym management
+  - name: sessions
+    description: Climbing session logging
+  - name: climbs
+    description: Individual climb logging
+  - name: partners
+    description: Partner finder / session posts
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /gyms:
+    get:
+      operationId: listGyms
+      tags: [gyms]
+      summary: List all gyms
+      responses:
+        "200":
+          description: List of gyms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Gym"
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List climbing sessions
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: string
+          required: false
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Create a new climbing session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSessionRequest"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      summary: Get a session by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionWithClimbs"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteSession
+      tags: [sessions]
+      summary: Delete a session
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /sessions/{sessionId}/climbs:
+    get:
+      operationId: listClimbs
+      tags: [climbs]
+      summary: List climbs in a session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of climbs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Climb"
+    post:
+      operationId: createClimb
+      tags: [climbs]
+      summary: Log a climb in a session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClimbRequest"
+      responses:
+        "201":
+          description: Climb logged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Climb"
+
+  /climbs/{id}:
+    delete:
+      operationId: deleteClimb
+      tags: [climbs]
+      summary: Delete a climb
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [sessions]
+      summary: Get progression stats
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: string
+          required: false
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
+  /partner-posts:
+    get:
+      operationId: listPartnerPosts
+      tags: [partners]
+      summary: List partner finder posts
+      responses:
+        "200":
+          description: List of partner posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PartnerPost"
+    post:
+      operationId: createPartnerPost
+      tags: [partners]
+      summary: Create a partner finder post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePartnerPostRequest"
+      responses:
+        "201":
+          description: Post created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartnerPost"
+
+  /partner-posts/{id}:
+    delete:
+      operationId: deletePartnerPost
+      tags: [partners]
+      summary: Delete a partner post
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Gym:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        location:
+          type: string
+        nearestMrt:
+          type: string
+        dayPassPrice:
+          type: number
+        membershipPrice:
+          type: number
+        openingHours:
+          type: string
+        routeSetDay:
+          type: string
+        gradeSystem:
+          type: string
+        website:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - name
+        - location
+        - nearestMrt
+        - dayPassPrice
+        - openingHours
+        - gradeSystem
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        gymId:
+          type: integer
+        gymName:
+          type: string
+        date:
+          type: string
+        notes:
+          type: string
+        climbCount:
+          type: integer
+        topGrade:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - gymId
+        - gymName
+        - date
+        - climbCount
+        - createdAt
+
+    SessionWithClimbs:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        gymId:
+          type: integer
+        gymName:
+          type: string
+        date:
+          type: string
+        notes:
+          type: string
+        climbCount:
+          type: integer
+        topGrade:
+          type: string
+        createdAt:
+          type: string
+        climbs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Climb"
+      required:
+        - id
+        - userId
+        - gymId
+        - gymName
+        - date
+        - climbCount
+        - createdAt
+        - climbs
+
+    CreateSessionRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        gymId:
+          type: integer
+        date:
+          type: string
+        notes:
+          type: string
+      required:
+        - userId
+        - gymId
+        - date
+
+    Climb:
+      type: object
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: integer
+        grade:
+          type: string
+        gradeSystem:
+          type: string
+        style:
+          type: string
+        sent:
+          type: boolean
+        attempts:
+          type: integer
+        notes:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - sessionId
+        - grade
+        - gradeSystem
+        - sent
+        - createdAt
+
+    CreateClimbRequest:
+      type: object
+      properties:
+        grade:
+          type: string
+        gradeSystem:
+          type: string
+        style:
+          type: string
+        sent:
+          type: boolean
+        attempts:
+          type: integer
+        notes:
+          type: string
+      required:
+        - grade
+        - gradeSystem
+        - sent
+
+    Stats:
+      type: object
+      properties:
+        totalSessions:
+          type: integer
+        totalClimbs:
+          type: integer
+        totalSends:
+          type: integer
+        topGradeEver:
+          type: string
+        favoriteGym:
+          type: string
+        sessionsByMonth:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthCount"
+        gradeDistribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/GradeCount"
+        progressionOverTime:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgressionPoint"
+      required:
+        - totalSessions
+        - totalClimbs
+        - totalSends
+        - sessionsByMonth
+        - gradeDistribution
+        - progressionOverTime
+
+    MonthCount:
+      type: object
+      properties:
+        month:
+          type: string
+        count:
+          type: integer
+      required:
+        - month
+        - count
+
+    GradeCount:
+      type: object
+      properties:
+        grade:
+          type: string
+        count:
+          type: integer
+      required:
+        - grade
+        - count
+
+    ProgressionPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        topGrade:
+          type: string
+        gradeNumeric:
+          type: number
+      required:
+        - date
+        - topGrade
+        - gradeNumeric
+
+    PartnerPost:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        userName:
+          type: string
+        gymId:
+          type: integer
+        gymName:
+          type: string
+        sessionDate:
+          type: string
+        sessionTime:
+          type: string
+        gradeRange:
+          type: string
+        message:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - userName
+        - gymId
+        - gymName
+        - sessionDate
+        - gradeRange
+        - createdAt
+
+    CreatePartnerPostRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        userName:
+          type: string
+        gymId:
+          type: integer
+        sessionDate:
+          type: string
+        sessionTime:
+          type: string
+        gradeRange:
+          type: string
+        message:
+          type: string
+      required:
+        - userId
+        - userName
+        - gymId
+        - sessionDate
+        - gradeRange

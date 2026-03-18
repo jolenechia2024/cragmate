@@ -1,0 +1,358 @@
+import { db, gymsTable } from "@workspace/db";
+
+const gyms = [
+  // --- GROUND UP ---
+  {
+    name: "Ground Up Climbing",
+    location: "60 Tessensohn Road, CSC@Tessensohn (Level 2), Singapore 217664",
+    nearestMrt: "Farrer Park",
+    dayPassPrice: "22.00",
+    membershipPrice: null,
+    openingHours: "Mon 5pm–11pm | Tue–Thu 12pm–11pm | Fri 12pm–10:30pm | Weekends & PH 10am–9pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "V-scale / Font",
+    website: "https://www.groundupsg.com",
+    description: "Outdoor lead wall (5c–7b), 10 top-rope lanes, 29 auto-belay lanes, bouldering and hangboards. One of Singapore's most comprehensive climbing facilities offering SNCS certification.",
+  },
+
+  // --- CLIMB CENTRAL ---
+  {
+    name: "Climb Central @ Kallang Wave Mall",
+    location: "#B1-01 Kallang Wave Mall, 1 Stadium Place, Singapore 397628",
+    nearestMrt: "Stadium",
+    dayPassPrice: "25.00",
+    membershipPrice: null,
+    openingHours: "Weekdays 11am–11pm | Weekends & PH 9am–9pm",
+    routeSetDay: "Regular",
+    gradeSystem: "Colour (custom)",
+    website: "https://www.climbcentral.sg",
+    description: "Tallest air-conditioned indoor climbing wall in Singapore at 16m (Walltopia). Top-rope, lead, auto-belay and 4m bouldering walls. Suitable for all levels.",
+  },
+  {
+    name: "Climb Central @ Novena (Velocity)",
+    location: "238 Thomson Rd, #03-23/25, Velocity @ Novena Square, Singapore 307683",
+    nearestMrt: "Novena",
+    dayPassPrice: "25.00",
+    membershipPrice: null,
+    openingHours: "Weekdays 11am–11pm | Weekends & PH 9am–9pm",
+    routeSetDay: "Regular",
+    gradeSystem: "Colour (custom)",
+    website: "https://www.climbcentral.sg",
+    description: "Beginner-friendly outlet with auto-belay, top-rope, speed climbing walls. TRS verification available here. No lead climbing.",
+  },
+  {
+    name: "Climb Central @ Funan",
+    location: "#B2-19/21 Funan Mall, 107 North Bridge Rd, Singapore 179105",
+    nearestMrt: "City Hall",
+    dayPassPrice: "25.00",
+    membershipPrice: null,
+    openingHours: "Weekdays 11am–11pm | Weekends & PH 9am–9pm",
+    routeSetDay: "Regular",
+    gradeSystem: "Colour (custom)",
+    website: "https://www.climbcentral.sg",
+    description: "Lead, top-rope, auto-belay and bouldering walls visible from the shopping mall escalators. Ground-belayed top-rope routes.",
+  },
+  {
+    name: "Climb Central @ Katong (i12)",
+    location: "#04-01/02 i12 Katong, 112 East Coast Road, Singapore 428802",
+    nearestMrt: "Marine Parade",
+    dayPassPrice: "25.00",
+    membershipPrice: null,
+    openingHours: "Weekdays 11am–11pm | Weekends & PH 9am–9pm",
+    routeSetDay: "Regular",
+    gradeSystem: "Colour (custom)",
+    website: "https://www.climbcentral.sg",
+    description: "Family-friendly roped-only gym (top-rope, auto-belay, lead). Features a jungle-themed auto-belay section for kids. No bouldering.",
+  },
+
+  // --- BFF CLIMB ---
+  {
+    name: "BFF Climb @ Bendemeer (CT Hub)",
+    location: "2 Kallang Ave, #01-20 CT Hub, Singapore 339407",
+    nearestMrt: "Bendemeer",
+    dayPassPrice: "27.25",
+    membershipPrice: null,
+    openingHours: "Daily 9:30am–10:45pm",
+    routeSetDay: "3–4× per week",
+    gradeSystem: "Colour (custom)",
+    website: "https://bffclimb.com",
+    description: "30–50 new bouldering problems and 12–15 new auto-belay routes every week. Two Moonboards. Free harness rental. One of the most active route-setting schedules in Singapore.",
+  },
+  {
+    name: "BFF Climb @ Our Tampines Hub",
+    location: "1 Tampines Walk, Our Tampines Hub, Singapore 528523",
+    nearestMrt: "Tampines",
+    dayPassPrice: "27.25",
+    membershipPrice: null,
+    openingHours: "Daily 9:30am–10:45pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "Colour (custom)",
+    website: "https://bffclimb.com",
+    description: "Naturally ventilated climbing gym with lead, top-rope, auto-belay and bouldering. Great for SNCS Level 1 & 2 certification courses. Dual-location pass with yo:HA outlet.",
+  },
+  {
+    name: "BFF Climb @ Tampines yo:HA",
+    location: "#03-06, 6 Tampines Street 92, yo:HA Commercial, Singapore 528893",
+    nearestMrt: "Tampines",
+    dayPassPrice: "27.25",
+    membershipPrice: null,
+    openingHours: "Daily 9:30am–10:45pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "Colour (custom)",
+    website: "https://bffclimb.com",
+    description: "Bouldering-focused outlet with dual-location pass access to the adjacent Tampines Hub gym. Compact and community-oriented.",
+  },
+
+  // --- BOULDER MOVEMENT ---
+  {
+    name: "Boulder Movement @ Downtown",
+    location: "6A Shenton Way, #B1-03 Downtown Gallery, Singapore 068815",
+    nearestMrt: "Shenton Way",
+    dayPassPrice: "30.00",
+    membershipPrice: null,
+    openingHours: "Mon 5:30pm–10pm | Tue–Fri 12pm–4:30pm / 5:30pm–10pm | Weekends & PH 10am–2:30pm / 3:30pm–8pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "Colour (Font)",
+    website: "https://www.boulderm.com",
+    description: "First bouldering gym in Singapore's CBD. Beginner-friendly walls with shorter heights. Fitness corner for strength conditioning. 3-day intro pass available.",
+  },
+  {
+    name: "Boulder Movement @ Tai Seng",
+    location: "18 Tai Seng St, #01-09, Singapore 539977",
+    nearestMrt: "Tai Seng",
+    dayPassPrice: "30.00",
+    membershipPrice: null,
+    openingHours: "Mon 5:30pm–10pm | Tue–Fri 12pm–4:30pm / 5:30pm–10pm | Weekends & PH 10am–2:30pm / 3:30pm–8pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "Colour (Font)",
+    website: "https://www.boulderm.com",
+    description: "Twice the size of the Downtown outlet. Large glass windows, spacious layout. Intermediate-focused with ample beginner routes. Above Tai Seng MRT.",
+  },
+  {
+    name: "Boulder Movement @ Rochor (Tekka Place)",
+    location: "2 Serangoon Rd, #02-12 Tekka Place, Singapore 218227",
+    nearestMrt: "Little India",
+    dayPassPrice: "30.00",
+    membershipPrice: null,
+    openingHours: "Mon 5:30pm–10pm | Wed 9am–10pm | Tue/Thu/Fri 12pm–4:30pm / 5:30pm–10pm | Weekends & PH 10am–2:30pm / 3:30pm–8pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "Colour (Font)",
+    website: "https://www.boulderm.com",
+    description: "Biggest Boulder Movement outlet on two floors: slab, overhang and pro walls on the first; Kilter Board training area on the second. Community-focused with early open on Wednesdays.",
+  },
+  {
+    name: "Boulder Movement @ Bugis+",
+    location: "201 Victoria St, #05-07 Bugis+, Singapore 188067",
+    nearestMrt: "Bugis",
+    dayPassPrice: "30.00",
+    membershipPrice: null,
+    openingHours: "Mon 5:30pm–10pm | Tue–Fri 12pm–4:30pm / 5:30pm–10pm | Weekends & PH 10am–2:30pm / 3:30pm–8pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "Colour (Font)",
+    website: "https://www.boulderm.com",
+    description: "Fifth Boulder Movement outlet with auto-belay and endurance climbing. Slightly harder, higher walls for intermediate to advanced climbers.",
+  },
+
+  // --- BOULDER+ ---
+  {
+    name: "Boulder+ @ Aperia Mall",
+    location: "12 Kallang Avenue, #03-17 Aperia Mall, Singapore 339511",
+    nearestMrt: "Lavender",
+    dayPassPrice: "24.00",
+    membershipPrice: null,
+    openingHours: "Mon 12:30pm–10:30pm | Tue–Fri 7:30am–10pm | Sat 8am–8pm | Sun 8am–5:30pm",
+    routeSetDay: "Regular",
+    gradeSystem: "V-scale",
+    website: "https://boulderplusclimbing.com",
+    description: "Features top-out boulders, arch walls, a 60° spray wall and comp-style setting. Early-bird morning sessions available Tue–Thu. Free shoe rental on first visit.",
+  },
+  {
+    name: "Boulder+ @ Chevrons",
+    location: "48 Boon Lay Way, The Chevrons, Singapore 649961",
+    nearestMrt: "Lakeside",
+    dayPassPrice: "28.00",
+    membershipPrice: null,
+    openingHours: "Mon 12pm–10pm | Tue–Thu 8:30am–10pm | Fri 8:30am–8pm | Weekends & PH 8:30am–8pm",
+    routeSetDay: "Regular",
+    gradeSystem: "V-scale",
+    website: "https://boulderplusclimbing.com",
+    description: "Singapore's largest bouldering gym at 22,000 sqft with a 70° roof section. Massive range of problems from beginner to elite. Free shoe rental on first visit.",
+  },
+
+  // --- FIT BLOC ---
+  {
+    name: "Fit Bloc @ Kent Ridge (Science Park)",
+    location: "87 Science Park Dr, #03-02 The Oasis, Singapore 118260",
+    nearestMrt: "Pasir Panjang",
+    dayPassPrice: "28.00",
+    membershipPrice: null,
+    openingHours: "Daily 9:30am–10:30pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "Colour (custom)",
+    website: "https://fitbloc.com",
+    description: "One of Singapore's largest gyms. 8m auto-belay high wall, full fitness facilities, 25m swimming pool, co-working space. Complimentary shoe and harness rental on first visit.",
+  },
+  {
+    name: "Fit Bloc @ Depot Heights",
+    location: "108 Depot Rd, #02-01 Depot Heights Shopping Centre, Singapore 100108",
+    nearestMrt: "Depot MRT (upcoming) / Labrador Park",
+    dayPassPrice: "28.00",
+    membershipPrice: null,
+    openingHours: "Daily 10am–10:30pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "Colour (custom)",
+    website: "https://fitbloc.com",
+    description: "Bouldering-only outlet (Fit Bloc 2.0). Bigger than most Singapore gyms with a Moon Board. Less crowded than Kent Ridge. 3-day intro pass shared across both outlets.",
+  },
+
+  // --- BOULDER PLANET ---
+  {
+    name: "Boulder Planet @ Sembawang",
+    location: "604 Sembawang Rd, #B1-22/23 Sembawang Shopping Centre, Singapore 758459",
+    nearestMrt: "Sembawang",
+    dayPassPrice: "30.00",
+    membershipPrice: null,
+    openingHours: "Weekdays 10am–10pm | Weekends 10am–9pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "V-scale",
+    website: "https://www.boulderplanet.sg",
+    description: "Luxe bouldering facility with premium interiors, competition wall, and spacious layout. Affiliated with Boruda Climbing and Malaysia's Bump Bouldering. Beginner-friendly 'Lift Off' taster session available.",
+  },
+  {
+    name: "Boulder Planet @ Tai Seng (Grantral Mall)",
+    location: "601 MacPherson Rd, #02-07 Grantral Mall @ MacPherson, Singapore 368242",
+    nearestMrt: "Tai Seng",
+    dayPassPrice: "30.00",
+    membershipPrice: null,
+    openingHours: "Weekdays 10am–10pm | Weekends 10am–9pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "V-scale",
+    website: "https://www.boulderplanet.sg",
+    description: "Competition-wall focused outlet with aggressive comp-style routes and fun problems. Steps from Tai Seng MRT Exit B.",
+  },
+
+  // --- KINETICS ---
+  {
+    name: "Kinetics Climbing",
+    location: "511 Serangoon Road, Singapore 218153",
+    nearestMrt: "Farrer Park",
+    dayPassPrice: "19.00",
+    membershipPrice: null,
+    openingHours: "Mon 4pm–10pm | Tue–Fri 1pm–10pm | Weekends 10am–7pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "V-scale / Font",
+    website: "https://www.kineticsclimbing.com.sg",
+    description: "Premier bouldering gym on Serangoon Road with top-rope routes, endurance walls and a Moonboard. In-house climbing shop. SNCS courses and personal coaching available.",
+  },
+
+  // --- LIGHTHOUSE ---
+  {
+    name: "Lighthouse Climbing",
+    location: "44 Pasir Panjang Road #B-02, Singapore 118504",
+    nearestMrt: "Pasir Panjang",
+    dayPassPrice: "24.00",
+    membershipPrice: null,
+    openingHours: "Weekdays 9:30am–10:15pm | Weekends 9:30am–9:15pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "V-scale",
+    website: "https://www.lighthouseclimbing.com",
+    description: "Singapore's only crowdfunded climbing gym — by the community, for the community. LGBTQ+ and kids-friendly. Strong, welcoming community. Near Pasir Panjang MRT.",
+  },
+
+  // --- OUTPOST / T-HALL ---
+  {
+    name: "Outpost Climbing (T-Hall)",
+    location: "464 Crawford Lane, #01-464, Singapore 190464",
+    nearestMrt: "Farrer Park",
+    dayPassPrice: "28.00",
+    membershipPrice: null,
+    openingHours: "Mon 5pm–10pm | Tue–Fri 1pm–10pm | Weekends 8:30am–8pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "Colour (custom)",
+    website: "https://t-hall.sg",
+    description: "Comprehensive gym with lead, top-rope, auto-belay and bouldering. Tall lead routes with overhangs. Free rope provided for lead climbing. Kid-friendly 'Fun Zone' with augmented climbing.",
+  },
+
+  // --- OYEYO ---
+  {
+    name: "OYEYO Boulder Home",
+    location: "148 Mackenzie Road, Singapore 228724",
+    nearestMrt: "Little India",
+    dayPassPrice: "18.00",
+    membershipPrice: null,
+    openingHours: "Weekdays 1pm–10pm | Weekends 10am–7pm",
+    routeSetDay: "Regular",
+    gradeSystem: "Colour (custom)",
+    website: "https://oyeyoboulderhome.com",
+    description: "Affordable old-school bouldering gym near Little India. Overhangs, roofs and beginner-friendly routes. First-timer rate $10 inclusive of shoe rental. Private coaching for kids and adults.",
+  },
+
+  // --- b8a ---
+  {
+    name: "b8a Climbing Gym",
+    location: "#03-06, 6 Tampines Street 92, yo:HA Commercial, Singapore 528893",
+    nearestMrt: "Tampines",
+    dayPassPrice: "22.00",
+    membershipPrice: null,
+    openingHours: "Weekdays 12pm–10:30pm | Sat 10am–6pm | Sun & PH 10am–8pm",
+    routeSetDay: "Regular",
+    gradeSystem: "V-scale",
+    website: "https://www.b8a.sg",
+    description: "Bouldering-only gym with a striking design. Singapore's only Grasshopper Board. Off-peak discount available (12pm–6pm weekdays). Under-21 pass at $15.",
+  },
+
+  // --- PROJECT SEND ---
+  {
+    name: "Project Send",
+    location: "8 Raffles Ave, #01-14 Esplanade Mall, Singapore 039802",
+    nearestMrt: "Esplanade",
+    dayPassPrice: "35.00",
+    membershipPrice: null,
+    openingHours: "Mon–Thu 11am–10pm | Fri–Sat 11am–11pm | Sun 11am–9pm",
+    routeSetDay: "Regular",
+    gradeSystem: "V-scale / Font",
+    website: "https://www.projectsend.sg",
+    description: "Central location at Esplanade Mall. Bouldering-focused with well-curated problems across all difficulty levels. Great for after-work sessions in the CBD.",
+  },
+
+  // --- Z VERTIGO ---
+  {
+    name: "Z-Vertigo Boulder Gym",
+    location: "1 Jalan Anak Bukit, #06-11 Bukit Timah Shopping Centre, Singapore 588996",
+    nearestMrt: "Beauty World",
+    dayPassPrice: "18.00",
+    membershipPrice: null,
+    openingHours: "Mon–Fri 12pm–10pm | Weekends 9am–8pm",
+    routeSetDay: "Regular",
+    gradeSystem: "V-scale",
+    website: "https://zvertigoclimbing.com",
+    description: "Compact gym known for harder, technical problems. Great value at $18. Located in Bukit Timah Shopping Centre — convenient for west-side climbers.",
+  },
+
+  // --- BORUDA ---
+  {
+    name: "boruda Climbing",
+    location: "27 Tai Seng Street, #01-02, Singapore 534023",
+    nearestMrt: "Tai Seng",
+    dayPassPrice: "28.00",
+    membershipPrice: null,
+    openingHours: "Mon 5pm–10pm | Tue–Fri 12pm–10pm | Weekends 10am–8pm",
+    routeSetDay: "Weekly",
+    gradeSystem: "V-scale",
+    website: "https://borudaclimbing.com",
+    description: "Premium bouldering gym affiliated with Boulder Planet and Malaysia's Bump Bouldering. Thoughtful route-setting with a focus on movement quality. Cross-access with affiliated gyms.",
+  },
+];
+
+async function main() {
+  console.log("Seeding gyms with real Singapore data...");
+  await db.delete(gymsTable);
+  await db.insert(gymsTable).values(gyms);
+  console.log(`Seeded ${gyms.length} gyms.`);
+  process.exit(0);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

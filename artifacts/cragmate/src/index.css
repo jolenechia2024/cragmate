@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme inline {
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-sans: 'Inter', sans-serif;
+
+  --color-background: hsl(180 44% 7%);
+  --color-foreground: hsl(180 10% 95%);
+  
+  --color-primary: hsl(168 100% 42%);
+  --color-primary-foreground: hsl(180 44% 7%);
+  --color-primary-hover: hsl(168 100% 35%);
+  
+  --color-card: hsl(180 30% 10%);
+  --color-card-foreground: hsl(180 10% 95%);
+  --color-card-border: hsl(180 30% 16%);
+  
+  --color-muted: hsl(180 20% 14%);
+  --color-muted-foreground: hsl(180 10% 65%);
+  
+  --color-accent: hsl(180 20% 16%);
+  --color-accent-foreground: hsl(180 10% 95%);
+  
+  --color-destructive: hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  
+  --color-border: hsl(180 30% 16%);
+  --color-input: hsl(180 20% 14%);
+  --color-ring: hsl(168 100% 42%);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+}
+
+:root {
+  --background: 180 44% 7%;
+  --foreground: 180 10% 95%;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased font-sans;
+    background-image: 
+      radial-gradient(circle at top right, rgba(0, 212, 170, 0.08), transparent 40%),
+      radial-gradient(circle at bottom left, rgba(0, 212, 170, 0.05), transparent 40%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-wide;
+  }
+
+  /* Custom Scrollbar for a gritty feel */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-teal-950/20;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-teal-900/50 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-teal-800/80;
+  }
+}

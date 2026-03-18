@@ -1,0 +1,19 @@
+packages:
+  "recharts": "For climbing progress charts and visual data representation"
+  "framer-motion": "For page transitions, modal animations, and interactive elements"
+  "date-fns": "For formatting session dates and timestamps"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility for intelligently merging tailwind classes"
+  "react-hook-form": "For robust form state management"
+  "@hookform/resolvers": "For Zod schema validation integration with forms"
+  "zod": "For defining and coercing form validation schemas"
+  "lucide-react": "For beautiful consistent iconography"
+
+images:
+  - path: "artifacts/cragmate/public/images/hero-texture.png"
+    description: "Dark moody rock climbing surface texture with dramatic lighting, harsh shadows, deep charcoal and stone brown tones"
+    aspect_ratio: "16:9"
+
+notes:
+  - Application uses a hardcoded user ID "guest-user" for all session and stat tracking since auth is not implemented.
+  - The API relies on the provided @workspace/api-client-react hooks.
