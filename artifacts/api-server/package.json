@@ -11,6 +11,7 @@
   "dependencies": {
     "@workspace/db": "0.0.0",
     "@workspace/api-zod": "0.0.0",
+    "dotenv": "^17.2.2",
     "drizzle-orm": "^0.45.1",
     "express": "^5",
     "cookie-parser": "^1.4.7",

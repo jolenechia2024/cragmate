@@ -9,12 +9,17 @@
     "scripts"
   ],
   "scripts": {
+    "dev": "npm run dev --workspace @workspace/cragmate",
+    "dev:web": "npm run dev --workspace @workspace/cragmate",
+    "dev:api": "npm run dev --workspace @workspace/api-server",
+    "dev:all": "concurrently -n web,api -c green,blue \"npm run dev:web\" \"npm run dev:api\"",
     "build": "npm run typecheck && npm run --workspaces --if-present build",
     "typecheck:libs": "tsc --build",
     "typecheck": "npm run typecheck:libs && npm run --workspaces --if-present typecheck"
   },
   "private": true,
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "typescript": "~5.9.2",
     "prettier": "^3.8.1"
   }

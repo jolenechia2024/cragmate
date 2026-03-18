@@ -20,7 +20,8 @@ export default function SessionLogger() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const { data: sessions, isLoading } = useListSessions({ userId: USER_ID });
+  const { data: sessionsRaw, isLoading } = useListSessions({ userId: USER_ID });
+  const sessions = Array.isArray(sessionsRaw) ? sessionsRaw : [];
   const { data: gyms } = useListGyms();
   
   const createMutation = useCreateSession({
@@ -60,7 +61,7 @@ export default function SessionLogger() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => <div key={i} className="h-48 bg-card rounded-xl animate-pulse" />)}
         </div>
-      ) : sessions?.length === 0 ? (
+      ) : sessions.length === 0 ? (
         <Card className="p-12 text-center border-dashed border-2 border-primary/20">
           <Activity className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
           <h3 className="text-2xl font-display uppercase mb-2">No sessions yet</h3>
@@ -69,7 +70,7 @@ export default function SessionLogger() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sessions?.map(session => (
+          {sessions.map(session => (
             <Link key={session.id} href={`/sessions/${session.id}`}>
               <Card className="h-full hover:border-primary/80 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
