@@ -10,7 +10,10 @@ type AuthContextValue = {
   user: User | null;
   userId: string;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+  ) => Promise<{ needsEmailConfirmation: boolean }>;
   signOut: () => Promise<void>;
 };
 
@@ -62,6 +65,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const user = session?.user ?? null;
     const userId = user?.id ?? GUEST_USER_ID;
 
+    const formatSupabaseAuthError = (
+      e: any,
+      mode: "login" | "signup",
+    ): string => {
+      const msg = e?.message ?? "Auth failed";
+      const lower = String(msg).toLowerCase();
+
+      // Supabase sometimes returns only "Invalid login credentials" for unconfirmed email.
+      if (mode === "login") {
+        if (lower.includes("invalid login credentials")) {
+          return "Invalid email or password. If you just signed up, please check your email and confirm your account before logging in.";
+        }
+        if (lower.includes("not confirmed") || lower.includes("email not confirmed")) {
+          return "Please confirm your email address before signing in.";
+        }
+      }
+
+      if (mode === "signup") {
+        if (lower.includes("already registered") && lower.includes("unconfirmed")) {
+          return "An account already exists for this email, but it isn't confirmed yet. Please confirm your email to log in.";
+        }
+      }
+
+      return msg;
+    };
+
     return {
       isConfigured,
       isLoading,
@@ -70,30 +99,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userId,
       signIn: async (email, password) => {
         if (!isConfigured) throw new Error("Auth not configured");
-            const { error } = await supabase!.auth.signInWithPassword({ email, password });
-            if (error) {
-              const details =
-                (error as any)?.code ? ` (${(error as any).code})` : "";
-              throw new Error(`${error.message}${details}`);
-            }
+        const { error } = await supabase!.auth.signInWithPassword({ email, password });
+        if (error) {
+          throw new Error(formatSupabaseAuthError(error, "login"));
+        }
       },
       signUp: async (email, password) => {
         if (!isConfigured) throw new Error("Auth not configured");
-            const { error } = await supabase!.auth.signUp({ email, password });
-            if (error) {
-              const details =
-                (error as any)?.code ? ` (${(error as any).code})` : "";
-              throw new Error(`${error.message}${details}`);
-            }
+        const envRedirect =
+          (import.meta as any).env?.VITE_EMAIL_REDIRECT_TO ??
+          (import.meta as any).env?.VITE_SITE_URL ??
+          undefined;
+        const emailRedirectToRaw =
+          (typeof envRedirect === "string" && envRedirect.trim() !== "" ? envRedirect : undefined) ??
+          (typeof window !== "undefined" ? window.location.origin : undefined);
+        const emailRedirectTo = emailRedirectToRaw?.replace(/\/$/, "");
+
+        const { data, error } = await supabase!.auth.signUp({
+          email,
+          password,
+          options: emailRedirectTo ? { emailRedirectTo } : undefined,
+        });
+        if (error) throw new Error(formatSupabaseAuthError(error, "signup"));
+
+        const confirmedAt = (data?.user as any)?.confirmed_at as string | null | undefined;
+        const hasSession = Boolean(data?.session);
+        const needsEmailConfirmation = Boolean(data?.user) && !confirmedAt && !hasSession;
+        return { needsEmailConfirmation };
       },
       signOut: async () => {
         if (!isConfigured) return;
         const { error } = await supabase!.auth.signOut();
-            if (error) {
-              const details =
-                (error as any)?.code ? ` (${(error as any).code})` : "";
-              throw new Error(`${error.message}${details}`);
-            }
+        if (error) {
+          throw new Error(formatSupabaseAuthError(error, "login"));
+        }
       },
     };
   }, [isConfigured, isLoading, session]);

@@ -78,11 +78,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
     setAuthError(null);
     setAuthBusy(true);
     try {
-      if (authMode === "login") await signIn(email, password);
-      else await signUp(email, password);
-      setAuthOpen(false);
-      setEmail("");
-      setPassword("");
+      if (authMode === "login") {
+        await signIn(email, password);
+        setAuthOpen(false);
+        setEmail("");
+        setPassword("");
+      } else {
+        const result = await signUp(email, password);
+        if (result.needsEmailConfirmation) {
+          setAuthMode("login");
+          setAuthError(
+            "Account created. Please check your email and confirm your address before logging in.",
+          );
+          setPassword("");
+          return;
+        }
+
+        setAuthOpen(false);
+        setEmail("");
+        setPassword("");
+      }
     } catch (e: any) {
       setAuthError(e?.message ?? "Auth failed");
     } finally {
