@@ -1,9 +1,13 @@
 import { Router, type IRouter } from "express";
 import { db, sessionsTable, gymsTable, climbsTable } from "@workspace/db";
-import { eq, desc, count, sql } from "drizzle-orm";
+import { and, eq, desc, count, sql } from "drizzle-orm";
 import { CreateSessionBody } from "@workspace/api-zod";
+import requireSupabaseAuth from "../middlewares/requireSupabaseAuth";
 
 const router: IRouter = Router();
+
+// Sessions/progress are private to the signed-in Supabase user.
+router.use(requireSupabaseAuth);
 
 const GRADE_ORDER = [
   "VB", "V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9",
@@ -21,35 +25,20 @@ function gradeNumeric(grade: string): number {
 
 router.get("/sessions", async (req, res) => {
   try {
-    const userId = req.query.userId as string | undefined;
+    const userId = (req as any).authUserId as string;
 
-    let rows;
-    if (userId) {
-      rows = await db
-        .select({
-          session: sessionsTable,
-          gymName: gymsTable.name,
-          climbCount: count(climbsTable.id),
-        })
-        .from(sessionsTable)
-        .leftJoin(gymsTable, eq(sessionsTable.gymId, gymsTable.id))
-        .leftJoin(climbsTable, eq(climbsTable.sessionId, sessionsTable.id))
-        .where(eq(sessionsTable.userId, userId))
-        .groupBy(sessionsTable.id, gymsTable.name)
-        .orderBy(desc(sessionsTable.date));
-    } else {
-      rows = await db
-        .select({
-          session: sessionsTable,
-          gymName: gymsTable.name,
-          climbCount: count(climbsTable.id),
-        })
-        .from(sessionsTable)
-        .leftJoin(gymsTable, eq(sessionsTable.gymId, gymsTable.id))
-        .leftJoin(climbsTable, eq(climbsTable.sessionId, sessionsTable.id))
-        .groupBy(sessionsTable.id, gymsTable.name)
-        .orderBy(desc(sessionsTable.date));
-    }
+    const rows = await db
+      .select({
+        session: sessionsTable,
+        gymName: gymsTable.name,
+        climbCount: count(climbsTable.id),
+      })
+      .from(sessionsTable)
+      .leftJoin(gymsTable, eq(sessionsTable.gymId, gymsTable.id))
+      .leftJoin(climbsTable, eq(climbsTable.sessionId, sessionsTable.id))
+      .where(eq(sessionsTable.userId, userId))
+      .groupBy(sessionsTable.id, gymsTable.name)
+      .orderBy(desc(sessionsTable.date));
 
     const results = await Promise.all(
       rows.map(async (row) => {
@@ -85,10 +74,12 @@ router.get("/sessions", async (req, res) => {
 router.post("/sessions", async (req, res) => {
   try {
     const body = CreateSessionBody.parse(req.body);
+    const userId = (req as any).authUserId as string;
     const [session] = await db
       .insert(sessionsTable)
       .values({
-        userId: body.userId,
+        // Never trust the client-provided userId.
+        userId,
         gymId: body.gymId,
         date: body.date,
         notes: body.notes ?? null,
@@ -120,11 +111,12 @@ router.post("/sessions", async (req, res) => {
 router.get("/sessions/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const userId = (req as any).authUserId as string;
     const rows = await db
       .select({ session: sessionsTable, gymName: gymsTable.name })
       .from(sessionsTable)
       .leftJoin(gymsTable, eq(sessionsTable.gymId, gymsTable.id))
-      .where(eq(sessionsTable.id, id))
+      .where(and(eq(sessionsTable.id, id), eq(sessionsTable.userId, userId)))
       .limit(1);
 
     if (!rows.length) {
@@ -174,22 +166,35 @@ router.get("/sessions/:id", async (req, res) => {
 router.delete("/sessions/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    await db.delete(sessionsTable).where(eq(sessionsTable.id, id));
-    res.status(204).send();
+    const userId = (req as any).authUserId as string;
+
+    const rows = await db
+      .select({ id: sessionsTable.id })
+      .from(sessionsTable)
+      .where(and(eq(sessionsTable.id, id), eq(sessionsTable.userId, userId)))
+      .limit(1);
+
+    if (!rows.length) return res.status(404).json({ error: "Session not found" });
+
+    await db
+      .delete(sessionsTable)
+      .where(and(eq(sessionsTable.id, id), eq(sessionsTable.userId, userId)));
+
+    return res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to delete session" });
+    return res.status(500).json({ error: "Failed to delete session" });
   }
 });
 
 router.get("/stats", async (req, res) => {
   try {
-    const userId = req.query.userId as string | undefined;
+    const userId = (req as any).authUserId as string;
 
-    let sessionQuery = db.select().from(sessionsTable);
-    const sessions = userId
-      ? await db.select().from(sessionsTable).where(eq(sessionsTable.userId, userId))
-      : await db.select().from(sessionsTable);
+    const sessions = await db
+      .select()
+      .from(sessionsTable)
+      .where(eq(sessionsTable.userId, userId));
 
     const sessionIds = sessions.map((s) => s.id);
 

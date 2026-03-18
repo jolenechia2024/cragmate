@@ -287,6 +287,13 @@ export async function customFetch<T = unknown>(
 
   const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
 
+  // Attach Supabase access token automatically when available.
+  // This is how our backend can enforce "signed-in only" privacy.
+  const token = (globalThis as any)?.__CRAGMATE_SUPABASE_ACCESS_TOKEN__ as string | null | undefined;
+  if (token && !headers.has("authorization")) {
+    headers.set("authorization", `Bearer ${token}`);
+  }
+
   if (
     typeof init.body === "string" &&
     !headers.has("content-type") &&

@@ -1,6 +1,6 @@
 import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui";
-import { useGetStats } from "@workspace/api-client-react";
+import { useGetStats, getGetStatsQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/auth/AuthProvider";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { Activity, Trophy, Flame, Target } from "lucide-react";
@@ -38,8 +38,29 @@ function AnimatedCounter({ value, prefix = "" }: { value: number | string, prefi
 }
 
 export default function Progress() {
-  const { userId } = useAuth();
-  const { data: stats, isLoading } = useGetStats({ userId });
+  const { userId, user } = useAuth();
+  const { data: stats, isLoading } = useGetStats(
+    { userId },
+    { query: { enabled: Boolean(user), queryKey: getGetStatsQueryKey({ userId }) } },
+  );
+
+  if (!user) {
+    return (
+      <Layout>
+        <div className="mb-8">
+          <h1 className="text-5xl font-display uppercase tracking-widest mb-2">
+            Progress
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Please log in to view your progression stats.
+          </p>
+        </div>
+        <Card className="p-10 border-dashed border-primary/20 text-center">
+          <p className="text-muted-foreground">Guest mode is disabled for progress.</p>
+        </Card>
+      </Layout>
+    );
+  }
 
   if (isLoading) {
     return (

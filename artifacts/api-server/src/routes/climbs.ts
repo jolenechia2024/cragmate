@@ -1,20 +1,38 @@
 import { Router, type IRouter } from "express";
 import { db, climbsTable, sessionsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { CreateClimbBody } from "@workspace/api-zod";
+import requireSupabaseAuth from "../middlewares/requireSupabaseAuth";
 
 const router: IRouter = Router();
+
+// Climbs are part of session logs, so require auth.
+router.use(requireSupabaseAuth);
 
 router.get("/sessions/:sessionId/climbs", async (req, res) => {
   try {
     const sessionId = parseInt(req.params.sessionId);
+    const userId = (req as any).authUserId as string;
     const climbs = await db
-      .select()
+      .select({
+        id: climbsTable.id,
+        sessionId: climbsTable.sessionId,
+        grade: climbsTable.grade,
+        gradeSystem: climbsTable.gradeSystem,
+        style: climbsTable.style,
+        sent: climbsTable.sent,
+        attempts: climbsTable.attempts,
+        notes: climbsTable.notes,
+        createdAt: climbsTable.createdAt,
+      })
       .from(climbsTable)
-      .where(eq(climbsTable.sessionId, sessionId))
+      .innerJoin(sessionsTable, eq(climbsTable.sessionId, sessionsTable.id))
+      .where(
+        and(eq(climbsTable.sessionId, sessionId), eq(sessionsTable.userId, userId)),
+      )
       .orderBy(desc(climbsTable.createdAt));
 
-    res.json(
+    return res.json(
       climbs.map((c) => ({
         id: c.id,
         sessionId: c.sessionId,
@@ -25,18 +43,26 @@ router.get("/sessions/:sessionId/climbs", async (req, res) => {
         attempts: c.attempts ?? 1,
         notes: c.notes ?? undefined,
         createdAt: c.createdAt.toISOString(),
-      }))
+      })),
     );
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch climbs" });
+    return res.status(500).json({ error: "Failed to fetch climbs" });
   }
 });
 
 router.post("/sessions/:sessionId/climbs", async (req, res) => {
   try {
     const sessionId = parseInt(req.params.sessionId);
+    const userId = (req as any).authUserId as string;
     const body = CreateClimbBody.parse(req.body);
+
+    const sessionRows = await db
+      .select({ id: sessionsTable.id })
+      .from(sessionsTable)
+      .where(and(eq(sessionsTable.id, sessionId), eq(sessionsTable.userId, userId)))
+      .limit(1);
+    if (!sessionRows.length) return res.status(404).json({ error: "Session not found" });
 
     const [climb] = await db
       .insert(climbsTable)
@@ -51,7 +77,7 @@ router.post("/sessions/:sessionId/climbs", async (req, res) => {
       })
       .returning();
 
-    res.status(201).json({
+    return res.status(201).json({
       id: climb.id,
       sessionId: climb.sessionId,
       grade: climb.grade,
@@ -64,18 +90,29 @@ router.post("/sessions/:sessionId/climbs", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: "Failed to log climb" });
+    return res.status(400).json({ error: "Failed to log climb" });
   }
 });
 
 router.delete("/climbs/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const userId = (req as any).authUserId as string;
+
+    const rows = await db
+      .select({ id: climbsTable.id })
+      .from(climbsTable)
+      .innerJoin(sessionsTable, eq(climbsTable.sessionId, sessionsTable.id))
+      .where(and(eq(climbsTable.id, id), eq(sessionsTable.userId, userId)))
+      .limit(1);
+
+    if (!rows.length) return res.status(404).json({ error: "Climb not found" });
+
     await db.delete(climbsTable).where(eq(climbsTable.id, id));
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to delete climb" });
+    return res.status(500).json({ error: "Failed to delete climb" });
   }
 });
 

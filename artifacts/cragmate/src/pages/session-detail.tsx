@@ -26,12 +26,34 @@ export default function SessionDetail() {
   const sessionId = parseInt(params?.id || "0");
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const { userId } = useAuth();
+  const { userId, user } = useAuth();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { data: session, isLoading: sessionLoading } = useGetSession(sessionId);
-  const { data: climbs, isLoading: climbsLoading } = useListClimbs(sessionId);
+  const { data: session, isLoading: sessionLoading } = useGetSession(sessionId, {
+    query: { enabled: Boolean(user), queryKey: getGetSessionQueryKey(sessionId) },
+  });
+  const { data: climbs, isLoading: climbsLoading } = useListClimbs(sessionId, {
+    query: { enabled: Boolean(user), queryKey: getListClimbsQueryKey(sessionId) },
+  });
+
+  if (!user) {
+    return (
+      <Layout>
+        <div className="mb-8">
+          <h1 className="text-5xl font-display uppercase tracking-widest mb-2">
+            Session
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Please log in to view session details.
+          </p>
+        </div>
+        <Card className="p-10 border-dashed border-primary/20 text-center">
+          <p className="text-muted-foreground">Guest mode is disabled for sessions.</p>
+        </Card>
+      </Layout>
+    );
+  }
   
   const createMutation = useCreateClimb({
     mutation: {

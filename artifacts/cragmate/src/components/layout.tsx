@@ -1,14 +1,14 @@
 import { Link, useRoute, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Mountain, Activity, NotebookPen, MapPin, Users, Menu, X, LogIn, LogOut, User as UserIcon, Inbox as InboxIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, Button, Input, Label } from "@/components/ui";
 import { useAuth } from "@/auth/AuthProvider";
 
 const NAV_ITEMS = [
-  { href: "/sessions", label: "Sessions", icon: NotebookPen },
-  { href: "/progress", label: "Progress", icon: Activity },
+  { href: "/sessions", label: "Sessions", icon: NotebookPen, requiresAuth: true },
+  { href: "/progress", label: "Progress", icon: Activity, requiresAuth: true },
   { href: "/grades", label: "Grade Converter", icon: Mountain },
   { href: "/gyms", label: "Gyms", icon: MapPin },
   { href: "/partners", label: "Partners", icon: Users },
@@ -89,6 +89,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
       setAuthBusy(false);
     }
   };
+
+  // Allow pages to trigger the auth modal (used for "save requires login").
+  useEffect(() => {
+    function onOpenAuth(e: Event) {
+      const ce = e as CustomEvent<{ mode?: "login" | "signup" }>;
+      const mode = ce.detail?.mode;
+      if (mode) setAuthMode(mode);
+      setAuthOpen(true);
+    }
+
+    window.addEventListener("cragmate:open-auth", onOpenAuth as EventListener);
+    return () => window.removeEventListener("cragmate:open-auth", onOpenAuth as EventListener);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">

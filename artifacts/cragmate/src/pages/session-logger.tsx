@@ -19,12 +19,28 @@ const sessionSchema = z.object({
 
 export default function SessionLogger() {
   const queryClient = useQueryClient();
-  const { userId } = useAuth();
+  const { userId, user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
-  const { data: sessionsRaw, isLoading } = useListSessions({ userId });
+
+  const { data: sessionsRaw, isLoading } = useListSessions(
+    { userId },
+    { query: { enabled: Boolean(user), queryKey: getListSessionsQueryKey({ userId }) } },
+  );
   const sessions = Array.isArray(sessionsRaw) ? sessionsRaw : [];
   const { data: gyms } = useListGyms();
+
+  const isGuest = !user;
+  const sampleSessions = [
+    {
+      id: 0,
+      gymName: "Sample Gym",
+      date: new Date().toISOString().split("T")[0],
+      notes: "Example session card (login to save your real logs).",
+      climbCount: 8,
+      topGrade: "V3",
+    },
+  ];
+  const displayedSessions = isGuest ? sampleSessions : sessions;
   
   const createMutation = useCreateSession({
     mutation: {
@@ -44,6 +60,15 @@ export default function SessionLogger() {
   });
 
   const onSubmit = (data: z.infer<typeof sessionSchema>) => {
+    if (!user) {
+      window.dispatchEvent(
+        new CustomEvent("cragmate:open-auth", {
+          detail: { mode: "login" as const },
+        }),
+      );
+      return;
+    }
+
     createMutation.mutate({ data: { ...data, userId } });
   };
 
@@ -63,17 +88,21 @@ export default function SessionLogger() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => <div key={i} className="h-48 bg-card rounded-xl animate-pulse" />)}
         </div>
-      ) : sessions.length === 0 ? (
+      ) : displayedSessions.length === 0 ? (
         <Card className="p-12 text-center border-dashed border-2 border-primary/20">
           <Activity className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
-          <h3 className="text-2xl font-display uppercase mb-2">No sessions yet</h3>
-          <p className="text-muted-foreground mb-6">Hit the crag and log your first session.</p>
-          <Button onClick={() => setIsDialogOpen(true)}>Start Logging</Button>
+          <h3 className="text-2xl font-display uppercase mb-2">
+            {isGuest ? "Preview sessions" : "No sessions yet"}
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            {isGuest ? "Fill the form, but sign in to save." : "Hit the crag and log your first session."}
+          </p>
+          <Button onClick={() => setIsDialogOpen(true)}>{isGuest ? "Try it" : "Start Logging"}</Button>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sessions.map(session => (
-            <Link key={session.id} href={`/sessions/${session.id}`}>
+          {displayedSessions.map((session) => {
+            const CardEl = (
               <Card className="h-full hover:border-primary/80 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 <div className="p-6 flex flex-col h-full relative z-10">
@@ -85,11 +114,11 @@ export default function SessionLogger() {
                       <Calendar className="w-3 h-3" /> {formatDate(session.date)}
                     </span>
                   </div>
-                  
+
                   {session.notes && (
                     <p className="text-muted-foreground text-sm mb-6 line-clamp-2 italic">"{session.notes}"</p>
                   )}
-                  
+
                   <div className="mt-auto grid grid-cols-2 gap-4 border-t border-border pt-4">
                     <div>
                       <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Total Climbs</p>
@@ -97,13 +126,23 @@ export default function SessionLogger() {
                     </div>
                     <div>
                       <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Top Grade</p>
-                      <p className="text-2xl font-display text-primary drop-shadow-[0_0_5px_rgba(0,212,170,0.3)]">{session.topGrade || 'N/A'}</p>
+                      <p className="text-2xl font-display text-primary drop-shadow-[0_0_5px_rgba(0,212,170,0.3)]">
+                        {session.topGrade || "N/A"}
+                      </p>
                     </div>
                   </div>
                 </div>
               </Card>
-            </Link>
-          ))}
+            );
+
+            return isGuest ? (
+              <div key={session.id}>{CardEl}</div>
+            ) : (
+              <Link key={session.id} href={`/sessions/${session.id}`}>
+                {CardEl}
+              </Link>
+            );
+          })}
         </div>
       )}
 
@@ -132,8 +171,14 @@ export default function SessionLogger() {
           </div>
           
           <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Saving..." : "Create Session"}
+            {createMutation.isPending ? "Saving..." : isGuest ? "Save (login required)" : "Create Session"}
           </Button>
+
+          {isGuest ? (
+            <p className="text-xs text-muted-foreground text-center">
+              You can fill this in, but you must sign in to save.
+            </p>
+          ) : null}
         </form>
       </Dialog>
     </Layout>

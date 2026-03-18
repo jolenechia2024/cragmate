@@ -22,6 +22,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
 
+  // Expose the current access token for the generated API client fetcher.
+  useEffect(() => {
+    (globalThis as any).__CRAGMATE_SUPABASE_ACCESS_TOKEN__ = session?.access_token ?? null;
+  }, [session]);
+
   useEffect(() => {
     let mounted = true;
 
