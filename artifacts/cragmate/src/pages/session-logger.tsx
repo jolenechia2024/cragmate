@@ -1,7 +1,8 @@
 import { Layout } from "@/components/layout";
 import { Card, Button, Dialog, Input, Label, Select, Textarea } from "@/components/ui";
 import { useListSessions, useCreateSession, useListGyms, getListSessionsQueryKey } from "@workspace/api-client-react";
-import { USER_ID, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { useAuth } from "@/auth/AuthProvider";
 import { Link } from "wouter";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -18,16 +19,17 @@ const sessionSchema = z.object({
 
 export default function SessionLogger() {
   const queryClient = useQueryClient();
+  const { userId } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const { data: sessionsRaw, isLoading } = useListSessions({ userId: USER_ID });
+  const { data: sessionsRaw, isLoading } = useListSessions({ userId });
   const sessions = Array.isArray(sessionsRaw) ? sessionsRaw : [];
   const { data: gyms } = useListGyms();
   
   const createMutation = useCreateSession({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId: USER_ID }) });
+        queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId }) });
         setIsDialogOpen(false);
         reset();
       }
@@ -42,7 +44,7 @@ export default function SessionLogger() {
   });
 
   const onSubmit = (data: z.infer<typeof sessionSchema>) => {
-    createMutation.mutate({ data: { ...data, userId: USER_ID } });
+    createMutation.mutate({ data: { ...data, userId } });
   };
 
   return (

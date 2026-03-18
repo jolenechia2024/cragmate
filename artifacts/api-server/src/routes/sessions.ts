@@ -101,7 +101,7 @@ router.post("/sessions", async (req, res) => {
       .where(eq(gymsTable.id, body.gymId))
       .limit(1);
 
-    res.status(201).json({
+    return res.status(201).json({
       id: session.id,
       userId: session.userId,
       gymId: session.gymId,
@@ -113,7 +113,7 @@ router.post("/sessions", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: "Failed to create session" });
+    return res.status(400).json({ error: "Failed to create session" });
   }
 });
 
@@ -143,7 +143,7 @@ router.get("/sessions/:id", async (req, res) => {
       return gradeNumeric(c.grade) > gradeNumeric(best) ? c.grade : best;
     }, "");
 
-    res.json({
+    return res.json({
       id: row.session.id,
       userId: row.session.userId,
       gymId: row.session.gymId,
@@ -167,7 +167,7 @@ router.get("/sessions/:id", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch session" });
+    return res.status(500).json({ error: "Failed to fetch session" });
   }
 });
 

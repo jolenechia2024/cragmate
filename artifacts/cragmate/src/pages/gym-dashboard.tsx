@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout";
 import { Card, Input, Badge, Button } from "@/components/ui";
 import { useListGyms, type Gym } from "@workspace/api-client-react";
 import { useState } from "react";
-import { Search, MapPin, Clock, DollarSign, ExternalLink, Calendar, Instagram } from "lucide-react";
+import { Search, MapPin, Clock, DollarSign, ExternalLink, Calendar } from "lucide-react";
 
 function formatUpdatedAt(value?: string) {
   if (!value) return undefined;
@@ -10,6 +10,15 @@ function formatUpdatedAt(value?: string) {
   if (Number.isNaN(d.getTime())) return undefined;
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
+
+const BRAND_INSTAGRAM_FALLBACK: Record<string, string> = {
+  "Boulder Movement": "https://www.instagram.com/bouldermovement/",
+  "Climb Central": "https://www.instagram.com/climbcentral/",
+  "BFF Climb": "https://www.instagram.com/bffclimb/",
+  "Boulder+": "https://www.instagram.com/boulderplusclimbing/",
+  "Fit Bloc": "https://www.instagram.com/fitbloc/",
+  "Ground Up Climbing": "https://www.instagram.com/groundupclimbing/",
+};
 
 export default function GymDashboard() {
   const { data: gyms, isLoading } = useListGyms();
@@ -40,7 +49,8 @@ export default function GymDashboard() {
     .map(([brand, outlets]) => ({
       brand,
       outlets: outlets.sort((a, b) => a.name.localeCompare(b.name)),
-      instagramUrl: outlets.find((o) => o.instagramUrl)?.instagramUrl,
+      instagramUrl:
+        outlets.find((o) => o.instagramUrl)?.instagramUrl ?? BRAND_INSTAGRAM_FALLBACK[brand],
       imageUrl: outlets.find((o) => o.imageUrl)?.imageUrl,
     }))
     .sort((a, b) => a.brand.localeCompare(b.brand));
@@ -97,15 +107,7 @@ export default function GymDashboard() {
                   <h3 className="text-3xl font-display uppercase tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     {group.brand}
                   </h3>
-                  {group.instagramUrl && (
-                    <Button
-                      variant="outline"
-                      className="shrink-0"
-                      onClick={() => window.open(group.instagramUrl, "_blank")}
-                    >
-                      Instagram <Instagram className="w-4 h-4 ml-2" />
-                    </Button>
-                  )}
+                  {/* Instagram button removed; use "Check routeset" per outlet */}
                 </div>
               </div>
 
@@ -115,7 +117,10 @@ export default function GymDashboard() {
                   const isExpanded = expandedGymIds.has(gym.id);
                   const hasRoutesetText = Boolean(gym.routesetSchedule?.extractedText);
                   const checkUrl =
-                    gym.instagramUrl || gym.routesetSchedule?.sourceUrl || gym.website;
+                    group.instagramUrl ||
+                    gym.instagramUrl ||
+                    gym.routesetSchedule?.sourceUrl ||
+                    gym.website;
 
                   return (
                     <div key={gym.id} className="rounded-xl border border-border p-4 bg-card/30">
@@ -154,10 +159,11 @@ export default function GymDashboard() {
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
-                        <Badge variant="default" className="bg-teal-950 border border-teal-900">
-                          {gym.gradeSystem}
-                        </Badge>
-                        {gym.routeSetDay && <Badge variant="warning">Resets: {gym.routeSetDay}</Badge>}
+                        {gym.gradeSystem !== "Colour (custom)" && (
+                          <Badge variant="default" className="bg-teal-950 border border-teal-900">
+                            {gym.gradeSystem}
+                          </Badge>
+                        )}
                         {updatedAtLabel && (
                           <Badge variant="default" className="bg-transparent border border-primary/30 text-primary">
                             Routeset updated: {updatedAtLabel}

@@ -1,12 +1,13 @@
 import { Layout } from "@/components/layout";
 import { Card, Button, Dialog, Input, Label, Select, Textarea, Badge } from "@/components/ui";
 import { useListPartnerPosts, useCreatePartnerPost, useListGyms, getListPartnerPostsQueryKey, useDeletePartnerPost } from "@workspace/api-client-react";
-import { USER_ID, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+import { useAuth } from "@/auth/AuthProvider";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, MapPin, Calendar, Clock, Trash2, User } from "lucide-react";
 
 const postSchema = z.object({
@@ -17,9 +18,21 @@ const postSchema = z.object({
   message: z.string().optional(),
 });
 
+type PartnerMessage = {
+  id: number;
+  postId: number;
+  senderId: string;
+  senderName: string;
+  body: string;
+  createdAt: string;
+};
+
 export default function PartnerFinder() {
   const queryClient = useQueryClient();
+  const { userId, user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [activePostId, setActivePostId] = useState<number | null>(null);
+  const [messageDraft, setMessageDraft] = useState("");
   
   const { data: posts, isLoading } = useListPartnerPosts();
   const { data: gyms } = useListGyms();
@@ -46,12 +59,44 @@ export default function PartnerFinder() {
     resolver: zodResolver(postSchema),
   });
 
+  const messagesQuery = useQuery({
+    queryKey: ["partnerMessages", activePostId],
+    enabled: activePostId != null,
+    queryFn: async () => {
+      const res = await fetch(`/api/partner-posts/${activePostId}/messages`);
+      if (!res.ok) throw new Error("Failed to load messages");
+      return (await res.json()) as PartnerMessage[];
+    },
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (vars: { postId: number; body: string }) => {
+      const res = await fetch(`/api/partner-posts/${vars.postId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderId: userId,
+          senderName: user?.email?.split("@")[0] ?? "Guest Climber",
+          body: vars.body,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to send message");
+      }
+      return (await res.json()) as PartnerMessage;
+    },
+    onSuccess: (_msg, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["partnerMessages", vars.postId] });
+    },
+  });
+
   const onSubmit = (data: z.infer<typeof postSchema>) => {
     createMutation.mutate({ 
       data: { 
         ...data, 
-        userId: USER_ID,
-        userName: "Guest Climber"
+        userId,
+        userName: user?.email?.split("@")[0] ?? "Guest Climber"
       } 
     });
   };
@@ -95,7 +140,7 @@ export default function PartnerFinder() {
                     <p className="text-xs text-muted-foreground">Posted {formatDate(post.createdAt)}</p>
                   </div>
                 </div>
-                {post.userId === USER_ID && (
+                {post.userId === userId && (
                   <button 
                     onClick={() => deleteMutation.mutate({ id: post.id })}
                     className="p-2 text-stone-500 hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors"
@@ -124,7 +169,16 @@ export default function PartnerFinder() {
               )}
               
               <div className="mt-6 pl-2">
-                <Button variant="outline" className="w-full">Message (Coming Soon)</Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setActivePostId(post.id);
+                    setMessageDraft("");
+                  }}
+                >
+                  Message
+                </Button>
               </div>
             </Card>
           ))}
@@ -171,6 +225,78 @@ export default function PartnerFinder() {
             {createMutation.isPending ? "Posting..." : "Post Session"}
           </Button>
         </form>
+      </Dialog>
+
+      <Dialog
+        open={activePostId != null}
+        onOpenChange={(open) => {
+          if (!open) setActivePostId(null);
+        }}
+        title="Messages"
+      >
+        <div className="space-y-4">
+          {messagesQuery.isLoading ? (
+            <div className="text-sm text-muted-foreground">Loading messages…</div>
+          ) : messagesQuery.isError ? (
+            <div className="text-sm text-destructive">
+              {(messagesQuery.error as Error).message}
+            </div>
+          ) : (
+            <div className="max-h-[45vh] overflow-auto space-y-3 rounded-lg border border-border p-3 bg-card/30">
+              {(messagesQuery.data ?? []).length === 0 ? (
+                <div className="text-sm text-muted-foreground">No messages yet. Say hi.</div>
+              ) : (
+                (messagesQuery.data ?? [])
+                  .slice()
+                  .reverse()
+                  .map((m) => (
+                    <div
+                      key={m.id}
+                      className={cn(
+                        "rounded-lg border border-border p-3",
+                        m.senderId === userId ? "bg-teal-950/20" : "bg-card/40",
+                      )}
+                    >
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div className="font-semibold text-sm text-foreground truncate">
+                          {m.senderName}
+                        </div>
+                        <div className="text-xs text-muted-foreground shrink-0">
+                          {formatDate(m.createdAt)}
+                        </div>
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                        {m.body}
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>Your message</Label>
+            <Textarea
+              value={messageDraft}
+              onChange={(e) => setMessageDraft(e.target.value)}
+              placeholder="Type a message…"
+            />
+            <Button
+              className="w-full"
+              onClick={() => {
+                if (activePostId == null) return;
+                const body = messageDraft.trim();
+                if (!body) return;
+                sendMessageMutation.mutate({ postId: activePostId, body });
+                setMessageDraft("");
+              }}
+              disabled={sendMessageMutation.isPending || activePostId == null}
+              type="button"
+            >
+              {sendMessageMutation.isPending ? "Sending…" : "Send"}
+            </Button>
+          </div>
+        </div>
       </Dialog>
     </Layout>
   );

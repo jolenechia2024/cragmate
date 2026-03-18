@@ -1,10 +1,10 @@
 import { Layout } from "@/components/layout";
 import { Card } from "@/components/ui";
 import { useGetStats } from "@workspace/api-client-react";
-import { USER_ID } from "@/lib/utils";
+import { useAuth } from "@/auth/AuthProvider";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { Activity, Trophy, Flame, Target } from "lucide-react";
-import { motion, useSpring, useTransform } from "framer-motion";
+import { motion, useMotionValueEvent, useSpring } from "framer-motion";
 import { useEffect, useState } from "react";
 
 function AnimatedCounter({ value, prefix = "" }: { value: number | string, prefix?: string }) {
@@ -13,10 +13,16 @@ function AnimatedCounter({ value, prefix = "" }: { value: number | string, prefi
   const isString = typeof value === 'string';
   
   const spring = useSpring(0, { bounce: 0, duration: 2000 });
-  const display = useTransform(spring, (current) => {
-    if (isString && isNaN(numValue)) return value;
+  const [display, setDisplay] = useState<string | number>(0);
+
+  useMotionValueEvent(spring, "change", (current) => {
+    if (!hasMounted) return;
+    if (isString && Number.isNaN(numValue)) {
+      setDisplay(value);
+      return;
+    }
     const rounded = Math.round(current);
-    return isString ? (value as string).replace(/[0-9.]+/, rounded.toString()) : rounded;
+    setDisplay(isString ? (value as string).replace(/[0-9.]+/, rounded.toString()) : rounded);
   });
   
   useEffect(() => {
@@ -24,13 +30,16 @@ function AnimatedCounter({ value, prefix = "" }: { value: number | string, prefi
     if (!isNaN(numValue)) {
       spring.set(numValue);
     }
+    // initialize immediately for non-numeric strings
+    if (isString && Number.isNaN(numValue)) setDisplay(value);
   }, [spring, numValue]);
   
-  return <motion.span>{hasMounted ? (isNaN(numValue) ? value : display) : 0}</motion.span>;
+  return <motion.span>{hasMounted ? display : 0}</motion.span>;
 }
 
 export default function Progress() {
-  const { data: stats, isLoading } = useGetStats({ userId: USER_ID });
+  const { userId } = useAuth();
+  const { data: stats, isLoading } = useGetStats({ userId });
 
   if (isLoading) {
     return (

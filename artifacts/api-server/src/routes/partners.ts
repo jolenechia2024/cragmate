@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, partnerPostsTable, gymsTable } from "@workspace/db";
+import { db, partnerPostsTable, partnerMessagesTable, gymsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { CreatePartnerPostBody } from "@workspace/api-zod";
 
@@ -13,7 +13,7 @@ router.get("/partner-posts", async (_req, res) => {
       .leftJoin(gymsTable, eq(partnerPostsTable.gymId, gymsTable.id))
       .orderBy(desc(partnerPostsTable.createdAt));
 
-    res.json(
+    return res.json(
       rows.map((r) => ({
         id: r.post.id,
         userId: r.post.userId,
@@ -29,7 +29,7 @@ router.get("/partner-posts", async (_req, res) => {
     );
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch partner posts" });
+    return res.status(500).json({ error: "Failed to fetch partner posts" });
   }
 });
 
@@ -55,7 +55,7 @@ router.post("/partner-posts", async (req, res) => {
       .where(eq(gymsTable.id, body.gymId))
       .limit(1);
 
-    res.status(201).json({
+    return res.status(201).json({
       id: post.id,
       userId: post.userId,
       userName: post.userName,
@@ -69,7 +69,7 @@ router.post("/partner-posts", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: "Failed to create partner post" });
+    return res.status(400).json({ error: "Failed to create partner post" });
   }
 });
 
@@ -77,10 +77,68 @@ router.delete("/partner-posts/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await db.delete(partnerPostsTable).where(eq(partnerPostsTable.id, id));
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to delete partner post" });
+    return res.status(500).json({ error: "Failed to delete partner post" });
+  }
+});
+
+router.get("/partner-posts/:id/messages", async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+    const rows = await db
+      .select()
+      .from(partnerMessagesTable)
+      .where(eq(partnerMessagesTable.postId, postId))
+      .orderBy(desc(partnerMessagesTable.createdAt));
+
+    return res.json(
+      rows.map((m) => ({
+        id: m.id,
+        postId: m.postId,
+        senderId: m.senderId,
+        senderName: m.senderName,
+        body: m.body,
+        createdAt: m.createdAt.toISOString(),
+      })),
+    );
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch messages" });
+  }
+});
+
+router.post("/partner-posts/:id/messages", async (req, res) => {
+  try {
+    const postId = parseInt(req.params.id);
+    const { senderId, senderName, body } = req.body ?? {};
+
+    if (!senderId || !senderName || !body || typeof body !== "string") {
+      return res.status(400).json({ error: "Invalid message body" });
+    }
+
+    const [msg] = await db
+      .insert(partnerMessagesTable)
+      .values({
+        postId,
+        senderId,
+        senderName,
+        body,
+      })
+      .returning();
+
+    return res.status(201).json({
+      id: msg.id,
+      postId: msg.postId,
+      senderId: msg.senderId,
+      senderName: msg.senderName,
+      body: msg.body,
+      createdAt: msg.createdAt.toISOString(),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ error: "Failed to create message" });
   }
 });
 

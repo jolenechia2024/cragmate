@@ -247,6 +247,50 @@ paths:
         "204":
           description: Deleted
 
+  /partner-posts/{id}/messages:
+    get:
+      operationId: listPartnerMessages
+      tags: [partners]
+      summary: List messages for a partner post
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PartnerMessage"
+    post:
+      operationId: createPartnerMessage
+      tags: [partners]
+      summary: Create a message for a partner post
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePartnerMessageRequest"
+      responses:
+        "201":
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartnerMessage"
+
 components:
   schemas:
     HealthStatus:
@@ -574,3 +618,40 @@ components:
         - gymId
         - sessionDate
         - gradeRange
+
+    PartnerMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        postId:
+          type: integer
+        senderId:
+          type: string
+        senderName:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - postId
+        - senderId
+        - senderName
+        - body
+        - createdAt
+
+    CreatePartnerMessageRequest:
+      type: object
+      properties:
+        senderId:
+          type: string
+        senderName:
+          type: string
+        body:
+          type: string
+      required:
+        - senderId
+        - senderName
+        - body

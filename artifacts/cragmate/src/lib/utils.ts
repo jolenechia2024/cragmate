@@ -14,4 +14,4 @@ export function formatDate(dateString: string) {
   }).format(date);
 }
 
-export const USER_ID = "guest-user";
+export const GUEST_USER_ID = "guest-user";

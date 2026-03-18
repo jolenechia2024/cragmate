@@ -1,8 +1,10 @@
 import { Link, useRoute, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Mountain, Activity, NotebookPen, MapPin, Users, Menu, X } from "lucide-react";
+import { Mountain, Activity, NotebookPen, MapPin, Users, Menu, X, LogIn, LogOut, User as UserIcon } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Dialog, Button, Input, Label } from "@/components/ui";
+import { useAuth } from "@/auth/AuthProvider";
 
 const NAV_ITEMS = [
   { href: "/sessions", label: "Sessions", icon: NotebookPen },
@@ -43,6 +45,32 @@ function NavLink({ href, label, icon: Icon, onClick }: any) {
 export function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [location] = useLocation();
+  const { user, userId, isConfigured, signIn, signUp, signOut } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
+
+  const displayName = user?.email ?? (userId === "guest-user" ? "Guest User" : userId);
+  const initials = (user?.email?.slice(0, 2) ?? "GU").toUpperCase();
+
+  const submitAuth = async () => {
+    setAuthError(null);
+    setAuthBusy(true);
+    try {
+      if (authMode === "login") await signIn(email, password);
+      else await signUp(email, password);
+      setAuthOpen(false);
+      setEmail("");
+      setPassword("");
+    } catch (e: any) {
+      setAuthError(e?.message ?? "Auth failed");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -91,7 +119,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex flex-col w-72 bg-card border-r border-border sticky top-0 h-screen p-6">
+      <div className="hidden md:flex flex-col w-80 bg-card border-r border-border sticky top-0 h-screen p-6">
         <Link href="/" className="flex items-center gap-3 text-primary mb-12 hover:scale-105 transition-transform origin-left drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]">
           <Mountain className="w-10 h-10" />
           <span className="font-display text-4xl tracking-widest mt-1">CRAGMATE</span>
@@ -104,13 +132,48 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="mt-auto pt-6 border-t border-border">
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-display text-xl text-foreground group relative overflow-hidden">
-              <span className="relative z-10">GU</span>
+              <span className="relative z-10">{initials}</span>
               <div className="absolute inset-0 bg-primary/20 scale-0 group-hover:scale-100 transition-transform rounded-full" />
             </div>
-            <div>
-              <p className="font-semibold text-foreground">Guest User</p>
-              <p className="text-xs uppercase tracking-wider text-primary/80">Free Plan</p>
+            <div className="min-w-0">
+              <p className="font-semibold text-foreground truncate">{displayName}</p>
+              <p className="text-xs uppercase tracking-wider text-primary/80">
+                {user ? "Signed in" : "Guest mode"}
+              </p>
             </div>
+          </div>
+
+          <div className="mt-4 flex gap-2">
+            {!user ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAuthMode("login");
+                  setAuthOpen(true);
+                }}
+                disabled={!isConfigured}
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Login
+              </Button>
+            ) : (
+              <Button variant="outline" className="flex-1" onClick={() => signOut()}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setAuthMode("signup");
+                setAuthOpen(true);
+              }}
+              disabled={!isConfigured || Boolean(user)}
+            >
+              <UserIcon className="w-4 h-4 mr-2" />
+              Sign Up
+            </Button>
           </div>
         </div>
       </div>
@@ -131,6 +194,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </AnimatePresence>
         </div>
       </main>
+
+      <Dialog open={authOpen} onOpenChange={setAuthOpen} title={authMode === "login" ? "Login" : "Sign up"}>
+        <div className="space-y-4">
+          <div>
+            <Label>Email</Label>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@example.com" />
+          </div>
+          <div>
+            <Label>Password</Label>
+            <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••" />
+          </div>
+          {authError && <p className="text-sm text-destructive">{authError}</p>}
+          <Button className="w-full" onClick={submitAuth} disabled={authBusy || !email || !password || !isConfigured}>
+            {authMode === "login" ? "Login" : "Create account"}
+          </Button>
+          <button
+            type="button"
+            className="w-full text-sm text-muted-foreground underline underline-offset-4"
+            onClick={() => setAuthMode((m) => (m === "login" ? "signup" : "login"))}
+          >
+            {authMode === "login" ? "Need an account? Sign up" : "Already have an account? Login"}
+          </button>
+        </div>
+      </Dialog>
     </div>
   );
 }

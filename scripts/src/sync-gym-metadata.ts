@@ -156,6 +156,40 @@ function extractReadableText(html: string): string {
     .join("\n");
 }
 
+function extractBoulderMovementRoutesetSchedule(html: string): string | undefined {
+  const $ = cheerio.load(html);
+  $("script, style, noscript, svg").remove();
+
+  const bodyText = $("body").text().replace(/\s+/g, " ").trim();
+  if (!bodyText.toLowerCase().includes("routeset schedule")) return undefined;
+
+  const anchors = [
+    "Our team is hard at work setting new problems for you 3 times per week",
+    "refreshed entirely every 6 weeks",
+    "Grading Circuit System",
+    "With a grading circuit",
+  ];
+
+  const lines: string[] = [];
+  for (const a of anchors) {
+    const idx = bodyText.toLowerCase().indexOf(a.toLowerCase());
+    if (idx === -1) continue;
+    const slice = bodyText.slice(idx, Math.min(bodyText.length, idx + 280));
+    // end at sentence boundary-ish
+    const cleaned = slice
+      .replace(/\s+/g, " ")
+      .replace(/(Explore|Download the Boulder Movement app\.).*$/i, "")
+      .trim();
+    if (cleaned.length > 20) lines.push(cleaned);
+  }
+
+  const unique = Array.from(new Set(lines));
+  if (!unique.length) return undefined;
+
+  // Keep it short and readable.
+  return unique.slice(0, 3).join("\n\n");
+}
+
 function pickRoutesetScheduleSnippet(text: string): string | undefined {
   const lines = text.split("\n");
   const keywords = ["route", "routes", "set", "setting", "reset", "routeset"];
@@ -188,8 +222,11 @@ async function bestEffortRoutesetSchedule(
   for (const url of candidates) {
     try {
       const html = await fetchHtml(url);
-      const text = extractReadableText(html);
-      const extractedText = pickRoutesetScheduleSnippet(text);
+      const extractedText =
+        url.includes("boulderm.com/locations/routeset-schedule")
+          ? extractBoulderMovementRoutesetSchedule(html) ??
+            pickRoutesetScheduleSnippet(extractReadableText(html))
+          : pickRoutesetScheduleSnippet(extractReadableText(html));
       if (extractedText) return { sourceUrl: url, extractedText };
     } catch {
       // ignore and continue

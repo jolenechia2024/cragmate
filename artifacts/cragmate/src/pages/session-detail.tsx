@@ -1,7 +1,8 @@
 import { Layout } from "@/components/layout";
 import { Card, Button, Dialog, Input, Label, Select, Textarea, Badge } from "@/components/ui";
 import { useGetSession, useListClimbs, useCreateClimb, useDeleteClimb, getListClimbsQueryKey, getGetSessionQueryKey, useDeleteSession, getListSessionsQueryKey } from "@workspace/api-client-react";
-import { USER_ID, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { useAuth } from "@/auth/AuthProvider";
 import { useRoute, useLocation } from "wouter";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -25,6 +26,7 @@ export default function SessionDetail() {
   const sessionId = parseInt(params?.id || "0");
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { userId } = useAuth();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -54,7 +56,7 @@ export default function SessionDetail() {
   const deleteSessionMutation = useDeleteSession({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId: USER_ID }) });
+        queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId }) });
         setLocation("/sessions");
       }
     }
