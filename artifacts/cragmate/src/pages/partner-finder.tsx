@@ -158,8 +158,8 @@ export default function PartnerFinder() {
     <Layout>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div>
-          <h1 className="text-5xl font-display uppercase tracking-widest mb-2">Partner Finder</h1>
-          <p className="text-muted-foreground text-lg">Need a belay or a projecting buddy? Post here.</p>
+          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Partner Finder</h1>
+          <p className="text-muted-foreground text-base sm:text-lg">Need a belay or a projecting buddy? Post here.</p>
         </div>
         <Button size="lg" onClick={() => setIsDialogOpen(true)} className="gap-2 w-full md:w-auto">
           <Plus className="w-5 h-5" /> Post Session
@@ -212,7 +212,7 @@ export default function PartnerFinder() {
                 )}
               </div>
 
-              <div className="space-y-3 mb-6 bg-teal-950/20 p-4 rounded-lg border border-teal-900/30 pl-6 ml-2">
+              <div className="space-y-3 mb-6 bg-teal-950/20 p-4 rounded-lg border border-teal-900/30 pl-4 sm:pl-6 sm:ml-2">
                 <div className="flex items-center gap-2 text-stone-300">
                   <MapPin className="w-4 h-4 text-primary" />
                   <span className="font-bold uppercase tracking-wider">{post.gymName}</span>
@@ -227,10 +227,10 @@ export default function PartnerFinder() {
               </div>
 
               {post.message && (
-                <p className="text-stone-400 italic pl-2 border-l-2 border-border ml-2 mb-4">"{post.message}"</p>
+                <p className="text-stone-400 italic pl-2 border-l-2 border-border mb-4">"{post.message}"</p>
               )}
               
-              <div className="mt-6 pl-2">
+              <div className="mt-6">
                 <Button
                   variant="outline"
                   className="w-full"
@@ -267,7 +267,7 @@ export default function PartnerFinder() {
             {errors.gymId && <p className="text-destructive text-sm mt-1">{errors.gymId.message}</p>}
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Date</Label>
               <Input type="date" {...register("sessionDate")} />

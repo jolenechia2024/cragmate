@@ -76,8 +76,8 @@ export default function SessionLogger() {
     <Layout>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div>
-          <h1 className="text-5xl font-display uppercase tracking-widest mb-2">Session Log</h1>
-          <p className="text-muted-foreground text-lg">Track your ascents and measure progress.</p>
+          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Session Log</h1>
+          <p className="text-muted-foreground text-base sm:text-lg">Track your ascents and measure progress.</p>
         </div>
         <Button size="lg" onClick={() => setIsDialogOpen(true)} className="gap-2 w-full md:w-auto">
           <Plus className="w-5 h-5" /> Log Session

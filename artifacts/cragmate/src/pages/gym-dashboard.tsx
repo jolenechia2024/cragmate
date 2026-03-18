@@ -69,8 +69,8 @@ export default function GymDashboard() {
   return (
     <Layout>
       <div className="mb-8">
-        <h1 className="text-5xl font-display uppercase tracking-widest mb-2">Local Gyms</h1>
-        <p className="text-muted-foreground text-lg">Compare passes, locations, and reset schedules.</p>
+        <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Local Gyms</h1>
+        <p className="text-muted-foreground text-base sm:text-lg">Compare passes, locations, and reset schedules.</p>
       </div>
 
       <div className="relative mb-8 max-w-xl">
@@ -88,7 +88,7 @@ export default function GymDashboard() {
           {[1, 2, 3, 4].map(i => <div key={i} className="h-80 bg-card rounded-xl animate-pulse border border-border" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {brandGroups.map((group) => (
             <Card key={group.brand} className="overflow-hidden">
               <div className="h-36 bg-teal-950 relative overflow-hidden">
@@ -106,7 +106,7 @@ export default function GymDashboard() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
-                  <h3 className="text-3xl font-display uppercase tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                  <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     {group.brand}
                   </h3>
                   {/* Instagram button removed; use "Check routeset" per outlet */}
@@ -128,7 +128,7 @@ export default function GymDashboard() {
                     <div key={gym.id} className="rounded-xl border border-border p-4 bg-card/30">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-display uppercase tracking-wider text-lg truncate">
+                          <p className="font-display uppercase tracking-wider text-base sm:text-lg truncate">
                             {gym.name}
                           </p>
                           <div className="mt-2 space-y-2">
@@ -193,7 +193,7 @@ export default function GymDashboard() {
                             )}
                           </div>
                           {gym.routesetSchedule?.extractedText ? (
-                            <p className={`text-xs text-muted-foreground whitespace-pre-line ${isExpanded ? "" : "line-clamp-4"}`}>
+                            <p className={`text-xs text-muted-foreground whitespace-pre-line break-words ${isExpanded ? "" : "line-clamp-4"}`}>
                               {gym.routesetSchedule.extractedText}
                             </p>
                           ) : (

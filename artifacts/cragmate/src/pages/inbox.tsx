@@ -34,8 +34,8 @@ export default function Inbox() {
     return (
       <Layout>
         <div className="mb-8">
-          <h1 className="text-5xl font-display uppercase tracking-widest mb-2">Inbox</h1>
-          <p className="text-muted-foreground text-lg">Your private messages.</p>
+          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Inbox</h1>
+          <p className="text-muted-foreground text-base sm:text-lg">Your private messages.</p>
         </div>
         <Card className="p-10 border-dashed border-primary/20 text-center">
           <MessageCircle className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
@@ -111,8 +111,8 @@ export default function Inbox() {
     <Layout>
       <div className="flex items-end justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-5xl font-display uppercase tracking-widest mb-2">Inbox</h1>
-          <p className="text-muted-foreground text-lg">Your private messages.</p>
+          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Inbox</h1>
+          <p className="text-muted-foreground text-base sm:text-lg">Your private messages.</p>
         </div>
       </div>
 

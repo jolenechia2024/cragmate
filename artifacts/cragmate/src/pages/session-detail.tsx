@@ -41,7 +41,7 @@ export default function SessionDetail() {
     return (
       <Layout>
         <div className="mb-8">
-          <h1 className="text-5xl font-display uppercase tracking-widest mb-2">
+          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">
             Session
           </h1>
           <p className="text-muted-foreground text-lg">
@@ -114,7 +114,7 @@ export default function SessionDetail() {
         </Link>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
-            <h1 className="text-5xl font-display uppercase tracking-widest mb-1">{session.gymName}</h1>
+            <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-1">{session.gymName}</h1>
             <p className="text-muted-foreground text-lg flex items-center gap-2">
               {formatDate(session.date)}
             </p>
@@ -136,21 +136,21 @@ export default function SessionDetail() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <Card className="p-6 bg-gradient-to-br from-stone-900 to-stone-950">
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Total Climbs</p>
-          <p className="text-5xl font-display text-white">{session.climbCount}</p>
+          <p className="text-4xl sm:text-5xl font-display text-white">{session.climbCount}</p>
         </Card>
         <Card className="p-6 bg-gradient-to-br from-stone-900 to-stone-950">
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Top Grade</p>
-          <p className="text-5xl font-display text-primary">{session.topGrade || '-'}</p>
+          <p className="text-4xl sm:text-5xl font-display text-primary">{session.topGrade || '-'}</p>
         </Card>
         <Card className="p-6 bg-gradient-to-br from-stone-900 to-stone-950">
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Sends</p>
-          <p className="text-5xl font-display text-green-500">
+          <p className="text-4xl sm:text-5xl font-display text-green-500">
             {climbs?.filter(c => c.sent).length || 0}
           </p>
         </Card>
       </div>
 
-      <h2 className="text-3xl font-display uppercase tracking-widest mb-6">Ascent Log</h2>
+      <h2 className="text-2xl sm:text-3xl font-display uppercase tracking-widest mb-6">Ascent Log</h2>
       
       {climbsLoading ? (
         <div className="space-y-4">

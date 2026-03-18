@@ -18,7 +18,7 @@ const NAV_ITEMS = [
 function NavLink({ href, label, icon: Icon, onClick, disabled }: any) {
   const [isActive] = useRoute(href);
   const className = cn(
-    "relative flex items-center gap-3 px-4 py-3 rounded-lg font-display text-xl tracking-wider transition-all duration-300 group overflow-hidden",
+    "relative flex items-center gap-3 px-4 py-3 rounded-lg font-display text-lg sm:text-xl tracking-wider transition-all duration-300 group overflow-hidden",
     disabled
       ? "opacity-50 cursor-not-allowed bg-transparent text-muted-foreground"
       : isActive
@@ -106,10 +106,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-card border-b border-border sticky top-0 z-40">
+      <div className="md:hidden flex items-center justify-between p-3 bg-card border-b border-border sticky top-0 z-40">
         <Link href="/" className="flex items-center gap-2 text-primary">
           <Mountain className="w-6 h-6" />
-          <span className="font-display text-2xl tracking-widest mt-1">CRAGMATE</span>
+          <span className="font-display text-xl tracking-widest mt-0.5">CRAGMATE</span>
         </Link>
         <button onClick={() => setMobileOpen(true)} className="text-foreground p-2">
           <Menu className="w-6 h-6" />
@@ -128,12 +128,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <motion.div 
               initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-64 bg-card border-r border-border z-50 p-6 flex flex-col"
+              className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-card border-r border-border z-50 p-4 flex flex-col overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-2 text-primary drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]">
                   <Mountain className="w-8 h-8" />
-                  <span className="font-display text-3xl tracking-widest mt-1">CRAGMATE</span>
+                  <span className="font-display text-2xl tracking-widest mt-1">CRAGMATE</span>
                 </div>
                 <button onClick={() => setMobileOpen(false)} className="text-muted-foreground">
                   <X className="w-6 h-6" />
@@ -227,7 +227,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-x-hidden relative">
-        <div className="max-w-6xl mx-auto p-4 md:p-8">
+        <div className="max-w-6xl mx-auto p-3 sm:p-6 md:p-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={location}
