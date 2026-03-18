@@ -6,10 +6,12 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed-gyms": "tsx ./src/seed-gyms.ts",
+    "sync-gym-metadata": "tsx ./src/sync-gym-metadata.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@workspace/db": "0.0.0"
+    "@workspace/db": "0.0.0",
+    "cheerio": "^1.1.2"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",

@@ -17,6 +17,11 @@ router.get("/gyms", async (_req, res) => {
       routeSetDay: g.routeSetDay ?? undefined,
       gradeSystem: g.gradeSystem,
       website: g.website ?? undefined,
+      imageUrl: g.imageUrl ?? undefined,
+      routesetSchedule: g.routesetSchedule ?? undefined,
+      routesetScheduleUpdatedAt: g.routesetScheduleUpdatedAt
+        ? g.routesetScheduleUpdatedAt.toISOString()
+        : undefined,
       description: g.description ?? undefined,
     }));
     res.json(mapped);
