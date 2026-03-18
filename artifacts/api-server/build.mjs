@@ -6,36 +6,9 @@ import { rm, readFile } from "fs/promises";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// server deps to bundle to reduce openat(2) syscalls
-// which helps cold start times without risking some
-// packages that are not bundle compatible
-const allowlist = [
-  "@google/generative-ai",
-  "axios",
-  "connect-pg-simple",
-  "cors",
-  "date-fns",
-  "drizzle-orm",
-  "drizzle-zod",
-  "express",
-  "express-rate-limit",
-  "express-session",
-  "jsonwebtoken",
-  "memorystore",
-  "multer",
-  "nanoid",
-  "nodemailer",
-  "openai",
-  "passport",
-  "passport-local",
-  "pg",
-  "stripe",
-  "uuid",
-  "ws",
-  "xlsx",
-  "zod",
-  "zod-validation-error",
-];
+  // In Vercel serverless, bundling Node dependencies can cause runtime issues
+  // (e.g. dynamic require of builtins). We'll bundle only our workspace code
+  // (@workspace/*) and externalize all normal node_modules deps.
 
 async function buildAll() {
   const distDir = path.resolve(__dirname, "dist");
@@ -48,13 +21,7 @@ async function buildAll() {
     ...Object.keys(pkg.dependencies || {}),
     ...Object.keys(pkg.devDependencies || {}),
   ];
-  const externals = allDeps.filter(
-    (dep) =>
-      !allowlist.includes(dep) &&
-      // Bundle monorepo workspace packages (they export TS sources).
-      !dep.startsWith("@workspace/") &&
-      !(pkg.dependencies?.[dep]?.startsWith("workspace:")),
-  );
+  const externals = allDeps.filter((dep) => !dep.startsWith("@workspace/"));
 
   await esbuild({
     // For Vercel serverless, bundle the Express app (no listen()).
