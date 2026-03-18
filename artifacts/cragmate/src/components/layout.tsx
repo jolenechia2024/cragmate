@@ -202,7 +202,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
             )}
             <Button
               variant="outline"
-              className="flex-1"
               onClick={() => {
                 setAuthMode("signup");
                 setAuthOpen(true);
