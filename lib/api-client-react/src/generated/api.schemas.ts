@@ -13,9 +13,19 @@ export interface ErrorResponse {
   error: string;
 }
 
+/**
+ * Best-effort scraped routesetting schedule snapshot
+ */
+export type GymRoutesetSchedule = {
+  sourceUrl?: string;
+  extractedText?: string;
+};
+
 export interface Gym {
   id: number;
   name: string;
+  /** Brand/group name used to group outlets */
+  brand?: string;
   location: string;
   nearestMrt: string;
   dayPassPrice: number;
@@ -24,6 +34,13 @@ export interface Gym {
   routeSetDay?: string;
   gradeSystem: string;
   website?: string;
+  /** Gym-provided image URL (scraped from official site) */
+  imageUrl?: string;
+  /** Gym brand Instagram profile URL */
+  instagramUrl?: string;
+  /** Best-effort scraped routesetting schedule snapshot */
+  routesetSchedule?: GymRoutesetSchedule;
+  routesetScheduleUpdatedAt?: string;
   description?: string;
 }
 

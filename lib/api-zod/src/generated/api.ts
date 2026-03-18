@@ -20,6 +20,10 @@ export const HealthCheckResponse = zod.object({
 export const ListGymsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
+  brand: zod
+    .string()
+    .optional()
+    .describe("Brand\/group name used to group outlets"),
   location: zod.string(),
   nearestMrt: zod.string(),
   dayPassPrice: zod.number(),
@@ -28,6 +32,22 @@ export const ListGymsResponseItem = zod.object({
   routeSetDay: zod.string().optional(),
   gradeSystem: zod.string(),
   website: zod.string().optional(),
+  imageUrl: zod
+    .string()
+    .optional()
+    .describe("Gym-provided image URL (scraped from official site)"),
+  instagramUrl: zod
+    .string()
+    .optional()
+    .describe("Gym brand Instagram profile URL"),
+  routesetSchedule: zod
+    .object({
+      sourceUrl: zod.string().optional(),
+      extractedText: zod.string().optional(),
+    })
+    .optional()
+    .describe("Best-effort scraped routesetting schedule snapshot"),
+  routesetScheduleUpdatedAt: zod.date().optional(),
   description: zod.string().optional(),
 });
 export const ListGymsResponse = zod.array(ListGymsResponseItem);

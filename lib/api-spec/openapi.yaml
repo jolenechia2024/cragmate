@@ -272,6 +272,9 @@ components:
           type: integer
         name:
           type: string
+        brand:
+          type: string
+          description: Brand/group name used to group outlets
         location:
           type: string
         nearestMrt:
@@ -288,6 +291,23 @@ components:
           type: string
         website:
           type: string
+        imageUrl:
+          type: string
+          description: Gym-provided image URL (scraped from official site)
+        instagramUrl:
+          type: string
+          description: Gym brand Instagram profile URL
+        routesetSchedule:
+          type: object
+          description: Best-effort scraped routesetting schedule snapshot
+          properties:
+            sourceUrl:
+              type: string
+            extractedText:
+              type: string
+        routesetScheduleUpdatedAt:
+          type: string
+          format: date-time
         description:
           type: string
       required:

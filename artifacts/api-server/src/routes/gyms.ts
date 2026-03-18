@@ -9,6 +9,7 @@ router.get("/gyms", async (_req, res) => {
     const mapped = gyms.map((g) => ({
       id: g.id,
       name: g.name,
+      brand: g.brand ?? undefined,
       location: g.location,
       nearestMrt: g.nearestMrt,
       dayPassPrice: Number(g.dayPassPrice),
@@ -18,6 +19,7 @@ router.get("/gyms", async (_req, res) => {
       gradeSystem: g.gradeSystem,
       website: g.website ?? undefined,
       imageUrl: g.imageUrl ?? undefined,
+      instagramUrl: g.instagramUrl ?? undefined,
       routesetSchedule: g.routesetSchedule ?? undefined,
       routesetScheduleUpdatedAt: g.routesetScheduleUpdatedAt
         ? g.routesetScheduleUpdatedAt.toISOString()

@@ -11,19 +11,19 @@ type GymTarget = {
 const TARGETS: GymTarget[] = [
   {
     name: "Boulder+ @ Aperia Mall",
-    websiteUrl: "https://boulderplusclimbing.com",
+    websiteUrl: "https://www.boulderplusclimbing.com/location",
   },
   {
     name: "Boulder+ @ Chevrons",
-    websiteUrl: "https://boulderplusclimbing.com",
+    websiteUrl: "https://www.boulderplusclimbing.com/location",
   },
   {
     name: "Fit Bloc @ Kent Ridge (Science Park)",
-    websiteUrl: "https://fitbloc.com",
+    websiteUrl: "https://fitbloc.com/kr-facilities/",
   },
   {
     name: "Fit Bloc @ Depot Heights",
-    websiteUrl: "https://fitbloc.com",
+    websiteUrl: "https://fitbloc.com/locate/",
   },
   {
     name: "BFF Climb @ Bendemeer (CT Hub)",
@@ -64,22 +64,22 @@ const TARGETS: GymTarget[] = [
   },
   {
     name: "Boulder Movement @ Downtown",
-    websiteUrl: "https://www.boulderm.com",
+    websiteUrl: "https://www.boulderm.com/locations/our-gyms/downtown",
     routesetUrlCandidates: ["https://www.boulderm.com/locations/routeset-schedule"],
   },
   {
     name: "Boulder Movement @ Tai Seng",
-    websiteUrl: "https://www.boulderm.com",
+    websiteUrl: "https://www.boulderm.com/locations/our-gyms/tai-seng",
     routesetUrlCandidates: ["https://www.boulderm.com/locations/routeset-schedule"],
   },
   {
     name: "Boulder Movement @ Rochor (Tekka Place)",
-    websiteUrl: "https://www.boulderm.com",
+    websiteUrl: "https://www.boulderm.com/locations/our-gyms/rochor",
     routesetUrlCandidates: ["https://www.boulderm.com/locations/routeset-schedule"],
   },
   {
     name: "Boulder Movement @ Bugis+",
-    websiteUrl: "https://www.boulderm.com",
+    websiteUrl: "https://www.boulderm.com/locations/our-gyms/bugis",
     routesetUrlCandidates: ["https://www.boulderm.com/locations/routeset-schedule"],
   },
 ];
@@ -229,7 +229,6 @@ async function main() {
       await db
         .update(gymsTable)
         .set({
-          website: target.websiteUrl,
           imageUrl: imageUrl ?? gym.imageUrl ?? null,
           routesetSchedule:
             routesetSchedule.sourceUrl || routesetSchedule.extractedText

@@ -1,18 +1,58 @@
 import { Layout } from "@/components/layout";
 import { Card, Input, Badge, Button } from "@/components/ui";
-import { useListGyms } from "@workspace/api-client-react";
+import { useListGyms, type Gym } from "@workspace/api-client-react";
 import { useState } from "react";
-import { Search, MapPin, Clock, DollarSign, ExternalLink } from "lucide-react";
+import { Search, MapPin, Clock, DollarSign, ExternalLink, Calendar, Instagram } from "lucide-react";
+
+function formatUpdatedAt(value?: string) {
+  if (!value) return undefined;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
 
 export default function GymDashboard() {
   const { data: gyms, isLoading } = useListGyms();
   const [search, setSearch] = useState("");
+  const [expandedGymIds, setExpandedGymIds] = useState<Set<number>>(new Set());
 
-  const filteredGyms = gyms?.filter(g => 
-    g.name.toLowerCase().includes(search.toLowerCase()) || 
-    g.location.toLowerCase().includes(search.toLowerCase()) ||
-    g.nearestMrt.toLowerCase().includes(search.toLowerCase())
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const gymsWithBrand = (gyms ?? []).map((g) => ({
+    ...g,
+    brand: g.brand || g.name.split(" @")[0]?.trim() || g.name,
+  }));
+
+  const filteredGyms = gymsWithBrand.filter((g) =>
+    normalizedSearch === "" ||
+    g.name.toLowerCase().includes(normalizedSearch) ||
+    g.brand.toLowerCase().includes(normalizedSearch) ||
+    g.location.toLowerCase().includes(normalizedSearch) ||
+    g.nearestMrt.toLowerCase().includes(normalizedSearch)
   );
+
+  const grouped = filteredGyms.reduce<Record<string, Gym[]>>((acc, g) => {
+    (acc[g.brand] ||= []).push(g);
+    return acc;
+  }, {});
+
+  const brandGroups = Object.entries(grouped)
+    .map(([brand, outlets]) => ({
+      brand,
+      outlets: outlets.sort((a, b) => a.name.localeCompare(b.name)),
+      instagramUrl: outlets.find((o) => o.instagramUrl)?.instagramUrl,
+      imageUrl: outlets.find((o) => o.imageUrl)?.imageUrl,
+    }))
+    .sort((a, b) => a.brand.localeCompare(b.brand));
+
+  const toggleExpanded = (id: number) => {
+    setExpandedGymIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   return (
     <Layout>
@@ -36,57 +76,140 @@ export default function GymDashboard() {
           {[1, 2, 3, 4].map(i => <div key={i} className="h-80 bg-card rounded-xl animate-pulse border border-border" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredGyms?.map(gym => (
-            <Card key={gym.id} className="flex flex-col group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] hover:border-primary/50 transition-all duration-300">
-              <div className="h-40 bg-teal-950 relative overflow-hidden">
-                {/* gym interior view */}
-                <img 
-                  src={`https://images.unsplash.com/photo-1522163182402-834f871fd851?w=800&q=80&auto=format&fit=crop`} 
-                  alt={`${gym.name} interior`}
-                  className="w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-700 mix-blend-luminosity"
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {brandGroups.map((group) => (
+            <Card key={group.brand} className="overflow-hidden">
+              <div className="h-36 bg-teal-950 relative overflow-hidden">
+                <img
+                  src={group.imageUrl || `https://images.unsplash.com/photo-1522163182402-834f871fd851?w=1200&q=80&auto=format&fit=crop`}
+                  alt={group.brand}
+                  loading="lazy"
+                  className="w-full h-full object-cover opacity-60"
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (img.dataset.fallbackApplied === "1") return;
+                    img.dataset.fallbackApplied = "1";
+                    img.src = "https://images.unsplash.com/photo-1522163182402-834f871fd851?w=1200&q=80&auto=format&fit=crop";
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <h3 className="text-3xl font-display uppercase tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:text-primary transition-colors">{gym.name}</h3>
+                <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
+                  <h3 className="text-3xl font-display uppercase tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    {group.brand}
+                  </h3>
+                  {group.instagramUrl && (
+                    <Button
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => window.open(group.instagramUrl, "_blank")}
+                    >
+                      Instagram <Instagram className="w-4 h-4 ml-2" />
+                    </Button>
+                  )}
                 </div>
               </div>
-              
-              <div className="p-6 flex-1 flex flex-col gap-4">
-                <div className="flex flex-wrap gap-2 mb-2">
-                  <Badge variant="default" className="bg-teal-950 border border-teal-900">{gym.gradeSystem}</Badge>
-                  {gym.routeSetDay && <Badge variant="warning">Resets: {gym.routeSetDay}</Badge>}
-                </div>
 
-                <div className="space-y-3 flex-1">
-                  <div className="flex items-start gap-3 text-stone-300">
-                    <MapPin className="w-5 h-5 text-primary shrink-0" />
-                    <div>
-                      <p className="font-medium text-foreground">{gym.location}</p>
-                      <p className="text-sm text-muted-foreground">MRT: {gym.nearestMrt}</p>
+              <div className="p-6 space-y-4">
+                {group.outlets.map((gym) => {
+                  const updatedAtLabel = formatUpdatedAt(gym.routesetScheduleUpdatedAt);
+                  const isExpanded = expandedGymIds.has(gym.id);
+                  const hasRoutesetText = Boolean(gym.routesetSchedule?.extractedText);
+                  const checkUrl =
+                    gym.instagramUrl || gym.routesetSchedule?.sourceUrl || gym.website;
+
+                  return (
+                    <div key={gym.id} className="rounded-xl border border-border p-4 bg-card/30">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-display uppercase tracking-wider text-lg truncate">
+                            {gym.name}
+                          </p>
+                          <div className="mt-2 space-y-2">
+                            <div className="flex items-start gap-3">
+                              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                              <div className="min-w-0">
+                                <p className="text-sm text-foreground">{gym.location}</p>
+                                <p className="text-xs text-muted-foreground">MRT: {gym.nearestMrt}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Clock className="w-4 h-4 text-primary shrink-0" />
+                              <span className="text-xs text-muted-foreground">{gym.openingHours}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2 shrink-0">
+                          {gym.website && (
+                            <Button variant="outline" onClick={() => window.open(gym.website, "_blank")}>
+                              Website <ExternalLink className="w-4 h-4 ml-2" />
+                            </Button>
+                          )}
+                          {checkUrl && (
+                            <Button onClick={() => window.open(checkUrl, "_blank")}>
+                              Check routeset <Calendar className="w-4 h-4 ml-2" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Badge variant="default" className="bg-teal-950 border border-teal-900">
+                          {gym.gradeSystem}
+                        </Badge>
+                        {gym.routeSetDay && <Badge variant="warning">Resets: {gym.routeSetDay}</Badge>}
+                        {updatedAtLabel && (
+                          <Badge variant="default" className="bg-transparent border border-primary/30 text-primary">
+                            Routeset updated: {updatedAtLabel}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {(gym.routesetSchedule?.extractedText || gym.routesetScheduleUpdatedAt) && (
+                        <div className="mt-4 rounded-lg border border-border bg-card/40 p-3">
+                          <div className="flex items-center justify-between gap-3 mb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Calendar className="w-4 h-4 text-primary" />
+                              <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                                Route setting{updatedAtLabel ? ` · updated ${updatedAtLabel}` : ""}
+                              </p>
+                            </div>
+                            {hasRoutesetText && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpanded(gym.id)}
+                                className="text-xs text-primary underline underline-offset-4 hover:text-primary/80 shrink-0"
+                              >
+                                {isExpanded ? "Show less" : "Show more"}
+                              </button>
+                            )}
+                          </div>
+                          {gym.routesetSchedule?.extractedText ? (
+                            <p className={`text-xs text-muted-foreground whitespace-pre-line ${isExpanded ? "" : "line-clamp-4"}`}>
+                              {gym.routesetSchedule.extractedText}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Schedule not published on the site.</p>
+                          )}
+                          {gym.routesetSchedule?.sourceUrl && (
+                            <button
+                              className="mt-2 text-xs text-primary underline underline-offset-4 hover:text-primary/80"
+                              onClick={() => window.open(gym.routesetSchedule!.sourceUrl!, "_blank")}
+                              type="button"
+                            >
+                              View source
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-stone-300">
-                    <Clock className="w-5 h-5 text-primary shrink-0" />
-                    <span className="text-sm">{gym.openingHours}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-stone-300">
-                    <DollarSign className="w-5 h-5 text-primary shrink-0" />
-                    <span className="text-sm font-semibold text-foreground">Day Pass: ${gym.dayPassPrice}</span>
-                  </div>
-                </div>
-
-                {gym.website && (
-                  <Button variant="outline" className="w-full mt-4" onClick={() => window.open(gym.website, '_blank')}>
-                    Visit Website <ExternalLink className="w-4 h-4 ml-2" />
-                  </Button>
-                )}
+                  );
+                })}
               </div>
             </Card>
           ))}
-          {filteredGyms?.length === 0 && (
+
+          {brandGroups.length === 0 && (
             <div className="col-span-full py-12 text-center text-muted-foreground">
               No gyms found matching your search.
             </div>

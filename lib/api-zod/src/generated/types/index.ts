@@ -14,6 +14,7 @@ export * from "./errorResponse";
 export * from "./getStatsParams";
 export * from "./gradeCount";
 export * from "./gym";
+export * from "./gymRoutesetSchedule";
 export * from "./healthStatus";
 export * from "./listSessionsParams";
 export * from "./monthCount";
