@@ -68,6 +68,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
+  const [authCooldownUntil, setAuthCooldownUntil] = useState<number | null>(null);
 
   const displayName = authLoading
     ? "Loading…"
@@ -75,6 +76,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const initials = (user?.email?.slice(0, 2) ?? "GU").toUpperCase();
 
   const submitAuth = async () => {
+    const now = Date.now();
+    if (authCooldownUntil != null && now < authCooldownUntil) {
+      const seconds = Math.ceil((authCooldownUntil - now) / 1000);
+      setAuthError(`Too many requests. Please wait ${seconds}s and try again.`);
+      return;
+    }
+
     setAuthError(null);
     setAuthBusy(true);
     try {
@@ -99,7 +107,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
         setPassword("");
       }
     } catch (e: any) {
-      setAuthError(e?.message ?? "Auth failed");
+      const msg = e?.message ?? "Auth failed";
+      setAuthError(msg);
+
+      const lower = String(msg).toLowerCase();
+      if (
+        lower.includes("too many signup attempts") ||
+        lower.includes("too many requests") ||
+        lower.includes("rate limit") ||
+        lower.includes("429")
+      ) {
+        setAuthCooldownUntil(Date.now() + 300_000);
+      } else {
+        setAuthCooldownUntil(null);
+      }
     } finally {
       setAuthBusy(false);
     }

@@ -71,6 +71,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ): string => {
       const msg = e?.message ?? "Auth failed";
       const lower = String(msg).toLowerCase();
+      const status = e?.status ?? e?.statusCode ?? e?.response?.status;
+
+      // Supabase rate limits auth endpoints (429).
+      // Window can be longer than a minute, so we tell the user to wait longer.
+      if (
+        status === 429 ||
+        lower.includes("rate limit exceeded") ||
+        lower.includes("too many requests")
+      ) {
+        return "Too many signup attempts. Please wait about 5 minutes and try again.";
+      }
 
       // Supabase sometimes returns only "Invalid login credentials" for unconfirmed email.
       if (mode === "login") {
