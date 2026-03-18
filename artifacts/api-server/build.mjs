@@ -51,6 +51,8 @@ async function buildAll() {
   const externals = allDeps.filter(
     (dep) =>
       !allowlist.includes(dep) &&
+      // Bundle monorepo workspace packages (they export TS sources).
+      !dep.startsWith("@workspace/") &&
       !(pkg.dependencies?.[dep]?.startsWith("workspace:")),
   );
 
