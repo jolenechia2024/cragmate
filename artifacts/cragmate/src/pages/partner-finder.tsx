@@ -202,7 +202,7 @@ export default function PartnerFinder() {
                     <p className="text-xs text-muted-foreground">Posted {formatDate(post.createdAt)}</p>
                   </div>
                 </div>
-                {post.userId === userId && (
+                {user && post.userId === userId && (
                   <button 
                     onClick={() => deleteMutation.mutate({ id: post.id })}
                     className="p-2 text-stone-500 hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors"

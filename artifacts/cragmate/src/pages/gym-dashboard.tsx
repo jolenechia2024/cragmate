@@ -25,6 +25,8 @@ export default function GymDashboard() {
   const [search, setSearch] = useState("");
   const [expandedGymIds, setExpandedGymIds] = useState<Set<number>>(new Set());
 
+  const formatPrice = (value?: number) => (value == null ? null : `$${value.toFixed(2)}`);
+
   const normalizedSearch = search.trim().toLowerCase();
 
   const gymsArray = Array.isArray(gyms) ? gyms : [];
@@ -161,9 +163,12 @@ export default function GymDashboard() {
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {gym.gradeSystem !== "Colour (custom)" && (
+                        <Badge variant="default" className="bg-teal-950 border border-teal-900">
+                          Day pass: {formatPrice(gym.dayPassPrice) ?? "N/A"}
+                        </Badge>
+                        {formatPrice(gym.membershipPrice) && (
                           <Badge variant="default" className="bg-teal-950 border border-teal-900">
-                            {gym.gradeSystem}
+                            Membership: {formatPrice(gym.membershipPrice)}
                           </Badge>
                         )}
                         {updatedAtLabel && (

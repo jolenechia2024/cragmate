@@ -82,9 +82,23 @@ router.post("/partner-posts", async (req, res) => {
   }
 });
 
-router.delete("/partner-posts/:id", async (req, res) => {
+router.delete("/partner-posts/:id", requireSupabaseAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const authUserId = (req as any).authUserId as string;
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const id = parseInt(rawId, 10);
+    if (Number.isNaN(id)) return res.status(400).json({ error: "Invalid post id" });
+
+    const [post] = await db
+      .select()
+      .from(partnerPostsTable)
+      .where(eq(partnerPostsTable.id, id))
+      .limit(1);
+
+    if (!post || post.userId !== authUserId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
     await db.delete(partnerPostsTable).where(eq(partnerPostsTable.id, id));
     return res.status(204).send();
   } catch (err) {
