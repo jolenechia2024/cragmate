@@ -1,15 +1,17 @@
 import dotenv from "dotenv";
 import path from "path";
-import { fileURLToPath } from "url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema/index";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, "../../../.env"), override: true });
-
 const { Pool } = pg;
+
+// In production/serverless, DATABASE_URL should be injected via env vars.
+// In local dev, load it from the repo-root .env if it's missing.
+if (!process.env.DATABASE_URL) {
+  const envPath = path.resolve(process.cwd(), ".env");
+  dotenv.config({ path: envPath, override: true });
+}
 
 
 if (!process.env.DATABASE_URL) {

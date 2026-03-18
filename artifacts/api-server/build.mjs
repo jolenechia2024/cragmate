@@ -28,9 +28,10 @@ async function buildAll() {
     entryPoints: [path.resolve(__dirname, "src/app.ts")],
     platform: "node",
     bundle: true,
-    // Our server code is ESM (uses import.meta.url), so output must be ESM too.
-    format: "esm",
-    outfile: path.resolve(distDir, "app.mjs"),
+    // Output as CJS so Node builtins can be required (Vercel serverless
+    // disallows the ESM dynamic require wrapper that esbuild generates).
+    format: "cjs",
+    outfile: path.resolve(distDir, "app.cjs"),
     define: {
       "process.env.NODE_ENV": '"production"',
     },
