@@ -55,12 +55,13 @@ async function buildAll() {
   );
 
   await esbuild({
-    entryPoints: [path.resolve(__dirname, "src/index.ts")],
+    // For Vercel serverless, bundle the Express app (no listen()).
+    entryPoints: [path.resolve(__dirname, "src/app.ts")],
     platform: "node",
     bundle: true,
     // Our server code is ESM (uses import.meta.url), so output must be ESM too.
     format: "esm",
-    outfile: path.resolve(distDir, "index.mjs"),
+    outfile: path.resolve(distDir, "app.mjs"),
     define: {
       "process.env.NODE_ENV": '"production"',
     },
