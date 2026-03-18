@@ -22,12 +22,12 @@ export default function Home() {
             Conquer <br/><span className="text-primary drop-shadow-[0_0_15px_rgba(0,212,170,0.4)]">The Crag</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl font-medium">
-            The ultimate companion for climbers. Track your sessions, visualize your progression, find partners, and convert grades seamlessly.
+            The ultimate companion for climbers. Track your sessions, visualize your progress, find buddies, and convert grades across all systems with ease. 
           </p>
           <div className="flex flex-wrap gap-4">
             <Link href="/sessions">
               <Button size="lg" className="gap-2">
-                Log a Session <ArrowRight className="w-5 h-5" />
+                Log Your Session <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
             <Link href="/gyms">
@@ -52,14 +52,14 @@ export default function Home() {
             <TrendingUp className="w-6 h-6 text-primary" />
           </div>
           <h3 className="text-2xl font-display uppercase tracking-wider mb-3">Track Progress</h3>
-          <p className="text-muted-foreground">Log every send and attempt. Watch your top grade rise with beautiful data visualizations.</p>
+          <p className="text-muted-foreground">Log every send and attempt. Watch your top grade rise with clear data visualizations.</p>
         </div>
         <div className="bg-card border border-border p-8 rounded-xl hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] hover:border-primary/50 transition-all duration-300 group">
           <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
             <Users className="w-6 h-6 text-primary" />
           </div>
           <h3 className="text-2xl font-display uppercase tracking-wider mb-3">Find Partners</h3>
-          <p className="text-muted-foreground">No belay partner? No problem. Post your planned sessions and connect with the community.</p>
+          <p className="text-muted-foreground">No belay/climbing partner? No worries. Post your planned sessions and connect with the community!</p>
         </div>
       </div>
     </Layout>
