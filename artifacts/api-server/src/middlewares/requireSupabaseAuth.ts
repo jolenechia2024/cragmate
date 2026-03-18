@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL?.trim();
+const SUPABASE_KEY = process.env.SUPABASE_KEY?.trim();
 
 async function getUserIdFromAccessToken(accessToken: string): Promise<string> {
   if (!SUPABASE_URL || !SUPABASE_KEY) {

@@ -80,7 +80,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lower.includes("rate limit exceeded") ||
         lower.includes("too many requests")
       ) {
-        return "Too many signup attempts. Please wait about 5 minutes and try again.";
+        // With Supabase hosted email, this can be a project-wide "email sends" limit (often ~1 hour).
+        return "Too many signup attempts. Please wait about 1 hour and try again.";
       }
 
       // Supabase sometimes returns only "Invalid login credentials" for unconfirmed email.

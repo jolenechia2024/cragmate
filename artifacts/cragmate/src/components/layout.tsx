@@ -69,6 +69,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const [authCooldownUntil, setAuthCooldownUntil] = useState<number | null>(null);
+  const isAuthCooldownActive =
+    authCooldownUntil != null && Date.now() < authCooldownUntil;
+  const authCooldownSecondsRemaining = isAuthCooldownActive
+    ? Math.ceil((authCooldownUntil! - Date.now()) / 1000)
+    : 0;
 
   const displayName = authLoading
     ? "Loading…"
@@ -117,7 +122,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         lower.includes("rate limit") ||
         lower.includes("429")
       ) {
-        setAuthCooldownUntil(Date.now() + 300_000);
+        setAuthCooldownUntil(Date.now() + 3_600_000);
       } else {
         setAuthCooldownUntil(null);
       }
@@ -369,7 +374,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="••••••••" />
           </div>
           {authError && <p className="text-sm text-destructive">{authError}</p>}
-          <Button className="w-full" onClick={submitAuth} disabled={authBusy || !email || !password || !isConfigured}>
+          <Button
+            className="w-full"
+            onClick={submitAuth}
+            disabled={authBusy || isAuthCooldownActive || !email || !password || !isConfigured}
+          >
             {authMode === "login" ? "Login" : "Create account"}
           </Button>
           <button
