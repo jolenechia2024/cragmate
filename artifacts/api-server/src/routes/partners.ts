@@ -1,6 +1,14 @@
 import { Router, type IRouter } from "express";
-import { db, partnerPostsTable, partnerMessagesTable, gymsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import {
+  db,
+  partnerPostsTable,
+  partnerMessagesTable,
+  gymsTable,
+  conversationsTable,
+  conversationMembersTable,
+  conversationMessagesTable,
+} from "@workspace/db";
+import { and, eq, desc } from "drizzle-orm";
 import { CreatePartnerPostBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -139,6 +147,221 @@ router.post("/partner-posts/:id/messages", async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(400).json({ error: "Failed to create message" });
+  }
+});
+
+router.get("/inbox", async (req, res) => {
+  try {
+    const userId = typeof req.query.userId === "string" ? req.query.userId : "";
+    if (!userId) return res.status(400).json({ error: "userId is required" });
+
+    const memberships = await db
+      .select()
+      .from(conversationMembersTable)
+      .where(eq(conversationMembersTable.userId, userId));
+
+    const conversationIds = Array.from(new Set(memberships.map((m) => m.conversationId)));
+    if (!conversationIds.length) return res.json([]);
+
+    const conversations = await db.select().from(conversationsTable);
+    const convById = new Map(conversations.map((c) => [c.id, c]));
+
+    const result: Array<{
+      id: number;
+      postId?: number;
+      otherUserId: string;
+      otherUserName: string;
+      lastMessage?: { body: string; createdAt: string; senderName: string };
+    }> = [];
+
+    for (const conversationId of conversationIds) {
+      const conv = convById.get(conversationId);
+      if (!conv) continue;
+
+      const members = await db
+        .select()
+        .from(conversationMembersTable)
+        .where(eq(conversationMembersTable.conversationId, conversationId));
+
+      const other = members.find((m) => m.userId !== userId);
+      if (!other) continue;
+
+      const last = await db
+        .select()
+        .from(conversationMessagesTable)
+        .where(eq(conversationMessagesTable.conversationId, conversationId))
+        .orderBy(desc(conversationMessagesTable.createdAt))
+        .limit(1);
+
+      result.push({
+        id: conversationId,
+        postId: conv.postId ?? undefined,
+        otherUserId: other.userId,
+        otherUserName: other.userName,
+        lastMessage: last[0]
+          ? {
+              body: last[0].body,
+              createdAt: last[0].createdAt.toISOString(),
+              senderName: last[0].senderName,
+            }
+          : undefined,
+      });
+    }
+
+    // Most recent first (by last message or createdAt)
+    result.sort((a, b) => {
+      const ad = a.lastMessage?.createdAt ?? "0000";
+      const bd = b.lastMessage?.createdAt ?? "0000";
+      return bd.localeCompare(ad);
+    });
+
+    return res.json(result);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch inbox" });
+  }
+});
+
+router.post("/conversations", async (req, res) => {
+  try {
+    const { postId, memberA, memberB } = req.body ?? {};
+    const aId = memberA?.userId as string | undefined;
+    const aName = memberA?.userName as string | undefined;
+    const bId = memberB?.userId as string | undefined;
+    const bName = memberB?.userName as string | undefined;
+
+    if (!aId || !aName || !bId || !bName) {
+      return res.status(400).json({ error: "Invalid members" });
+    }
+
+    // Try to find an existing conversation with the same members + same postId (if provided)
+    const aMemberships = await db
+      .select()
+      .from(conversationMembersTable)
+      .where(eq(conversationMembersTable.userId, aId));
+
+    let existingId: number | undefined;
+    for (const mem of aMemberships) {
+      const conv = await db
+        .select()
+        .from(conversationsTable)
+        .where(eq(conversationsTable.id, mem.conversationId))
+        .limit(1);
+      const c = conv[0];
+      if (!c) continue;
+      if ((postId ?? null) !== (c.postId ?? null)) continue;
+
+      const bMember = await db
+        .select()
+        .from(conversationMembersTable)
+        .where(
+          and(
+            eq(conversationMembersTable.conversationId, mem.conversationId),
+            eq(conversationMembersTable.userId, bId),
+          ),
+        )
+        .limit(1);
+      if (bMember.length) {
+        existingId = mem.conversationId;
+        break;
+      }
+    }
+
+    if (existingId) return res.json({ id: existingId });
+
+    const [conv] = await db
+      .insert(conversationsTable)
+      .values({ postId: typeof postId === "number" ? postId : null })
+      .returning();
+
+    await db.insert(conversationMembersTable).values([
+      { conversationId: conv.id, userId: aId, userName: aName },
+      { conversationId: conv.id, userId: bId, userName: bName },
+    ]);
+
+    return res.status(201).json({ id: conv.id });
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ error: "Failed to create conversation" });
+  }
+});
+
+router.get("/conversations/:id/messages", async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.id);
+    const userId = typeof req.query.userId === "string" ? req.query.userId : "";
+    if (!userId) return res.status(400).json({ error: "userId is required" });
+
+    const member = await db
+      .select()
+      .from(conversationMembersTable)
+      .where(
+        and(
+          eq(conversationMembersTable.conversationId, conversationId),
+          eq(conversationMembersTable.userId, userId),
+        ),
+      )
+      .limit(1);
+    if (!member.length) return res.status(403).json({ error: "Forbidden" });
+
+    const rows = await db
+      .select()
+      .from(conversationMessagesTable)
+      .where(eq(conversationMessagesTable.conversationId, conversationId))
+      .orderBy(desc(conversationMessagesTable.createdAt));
+
+    return res.json(
+      rows.map((m) => ({
+        id: m.id,
+        conversationId: m.conversationId,
+        senderId: m.senderId,
+        senderName: m.senderName,
+        body: m.body,
+        createdAt: m.createdAt.toISOString(),
+      })),
+    );
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch conversation messages" });
+  }
+});
+
+router.post("/conversations/:id/messages", async (req, res) => {
+  try {
+    const conversationId = parseInt(req.params.id);
+    const { senderId, senderName, body } = req.body ?? {};
+    if (!senderId || !senderName || !body || typeof body !== "string") {
+      return res.status(400).json({ error: "Invalid message body" });
+    }
+
+    const member = await db
+      .select()
+      .from(conversationMembersTable)
+      .where(
+        and(
+          eq(conversationMembersTable.conversationId, conversationId),
+          eq(conversationMembersTable.userId, senderId),
+        ),
+      )
+      .limit(1);
+    if (!member.length) return res.status(403).json({ error: "Forbidden" });
+
+    const [msg] = await db
+      .insert(conversationMessagesTable)
+      .values({ conversationId, senderId, senderName, body })
+      .returning();
+
+    return res.status(201).json({
+      id: msg.id,
+      conversationId: msg.conversationId,
+      senderId: msg.senderId,
+      senderName: msg.senderName,
+      body: msg.body,
+      createdAt: msg.createdAt.toISOString(),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ error: "Failed to create conversation message" });
   }
 });
 

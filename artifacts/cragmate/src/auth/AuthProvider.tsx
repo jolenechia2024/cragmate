@@ -65,18 +65,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userId,
       signIn: async (email, password) => {
         if (!isConfigured) throw new Error("Auth not configured");
-        const { error } = await supabase!.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+            const { error } = await supabase!.auth.signInWithPassword({ email, password });
+            if (error) {
+              const details =
+                (error as any)?.code ? ` (${(error as any).code})` : "";
+              throw new Error(`${error.message}${details}`);
+            }
       },
       signUp: async (email, password) => {
         if (!isConfigured) throw new Error("Auth not configured");
-        const { error } = await supabase!.auth.signUp({ email, password });
-        if (error) throw error;
+            const { error } = await supabase!.auth.signUp({ email, password });
+            if (error) {
+              const details =
+                (error as any)?.code ? ` (${(error as any).code})` : "";
+              throw new Error(`${error.message}${details}`);
+            }
       },
       signOut: async () => {
         if (!isConfigured) return;
         const { error } = await supabase!.auth.signOut();
-        if (error) throw error;
+            if (error) {
+              const details =
+                (error as any)?.code ? ` (${(error as any).code})` : "";
+              throw new Error(`${error.message}${details}`);
+            }
       },
     };
   }, [isConfigured, isLoading, session]);

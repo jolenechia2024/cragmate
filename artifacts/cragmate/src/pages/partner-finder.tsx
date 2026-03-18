@@ -27,11 +27,22 @@ type PartnerMessage = {
   createdAt: string;
 };
 
+type Conversation = { id: number };
+type ConversationMessage = {
+  id: number;
+  conversationId: number;
+  senderId: string;
+  senderName: string;
+  body: string;
+  createdAt: string;
+};
+
 export default function PartnerFinder() {
   const queryClient = useQueryClient();
   const { userId, user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [activePostId, setActivePostId] = useState<number | null>(null);
+  const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [messageDraft, setMessageDraft] = useState("");
   
   const { data: posts, isLoading } = useListPartnerPosts();
@@ -59,19 +70,46 @@ export default function PartnerFinder() {
     resolver: zodResolver(postSchema),
   });
 
+  const conversationQuery = useMutation({
+    mutationFn: async (vars: { postId: number; otherUserId: string; otherUserName: string }) => {
+      const res = await fetch(`/api/conversations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postId: vars.postId,
+          memberA: { userId, userName: user?.email?.split("@")[0] ?? "Guest Climber" },
+          memberB: { userId: vars.otherUserId, userName: vars.otherUserName },
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to open conversation");
+      }
+      return (await res.json()) as Conversation;
+    },
+    onSuccess: (data) => {
+      setActiveConversationId(data.id);
+    },
+  });
+
   const messagesQuery = useQuery({
-    queryKey: ["partnerMessages", activePostId],
-    enabled: activePostId != null,
+    queryKey: ["conversationMessages", activeConversationId, userId],
+    enabled: activeConversationId != null,
     queryFn: async () => {
-      const res = await fetch(`/api/partner-posts/${activePostId}/messages`);
-      if (!res.ok) throw new Error("Failed to load messages");
-      return (await res.json()) as PartnerMessage[];
+      const res = await fetch(
+        `/api/conversations/${activeConversationId}/messages?userId=${encodeURIComponent(userId)}`,
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to load messages");
+      }
+      return (await res.json()) as ConversationMessage[];
     },
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (vars: { postId: number; body: string }) => {
-      const res = await fetch(`/api/partner-posts/${vars.postId}/messages`, {
+    mutationFn: async (vars: { conversationId: number; body: string }) => {
+      const res = await fetch(`/api/conversations/${vars.conversationId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -84,10 +122,11 @@ export default function PartnerFinder() {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error ?? "Failed to send message");
       }
-      return (await res.json()) as PartnerMessage;
+      return (await res.json()) as ConversationMessage;
     },
     onSuccess: (_msg, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["partnerMessages", vars.postId] });
+      queryClient.invalidateQueries({ queryKey: ["conversationMessages", vars.conversationId, userId] });
+      queryClient.invalidateQueries({ queryKey: ["inbox", userId] });
     },
   });
 
@@ -112,6 +151,15 @@ export default function PartnerFinder() {
           <Plus className="w-5 h-5" /> Post Session
         </Button>
       </div>
+
+      {!user && (
+        <Card className="p-4 mb-6 border-dashed border-primary/20">
+          <p className="text-sm text-muted-foreground">
+            Direct messages are <span className="text-foreground font-semibold">private</span> and require login.
+            You can still browse posts in guest mode.
+          </p>
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="space-y-4">
@@ -173,9 +221,16 @@ export default function PartnerFinder() {
                   variant="outline"
                   className="w-full"
                   onClick={() => {
+                    if (!user) return;
                     setActivePostId(post.id);
                     setMessageDraft("");
+                    conversationQuery.mutate({
+                      postId: post.id,
+                      otherUserId: post.userId,
+                      otherUserName: post.userName,
+                    });
                   }}
+                  disabled={!user}
                 >
                   Message
                 </Button>
@@ -228,13 +283,19 @@ export default function PartnerFinder() {
       </Dialog>
 
       <Dialog
-        open={activePostId != null}
+        open={activeConversationId != null}
         onOpenChange={(open) => {
-          if (!open) setActivePostId(null);
+          if (!open) {
+            setActivePostId(null);
+            setActiveConversationId(null);
+          }
         }}
         title="Messages"
       >
         <div className="space-y-4">
+          {conversationQuery.isPending ? (
+            <div className="text-sm text-muted-foreground">Opening conversation…</div>
+          ) : null}
           {messagesQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">Loading messages…</div>
           ) : messagesQuery.isError ? (
@@ -284,13 +345,13 @@ export default function PartnerFinder() {
             <Button
               className="w-full"
               onClick={() => {
-                if (activePostId == null) return;
+                if (activeConversationId == null) return;
                 const body = messageDraft.trim();
                 if (!body) return;
-                sendMessageMutation.mutate({ postId: activePostId, body });
+                sendMessageMutation.mutate({ conversationId: activeConversationId, body });
                 setMessageDraft("");
               }}
-              disabled={sendMessageMutation.isPending || activePostId == null}
+              disabled={sendMessageMutation.isPending || activeConversationId == null}
               type="button"
             >
               {sendMessageMutation.isPending ? "Sending…" : "Send"}

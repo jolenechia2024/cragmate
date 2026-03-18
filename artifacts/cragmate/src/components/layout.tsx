@@ -1,6 +1,6 @@
 import { Link, useRoute, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Mountain, Activity, NotebookPen, MapPin, Users, Menu, X, LogIn, LogOut, User as UserIcon } from "lucide-react";
+import { Mountain, Activity, NotebookPen, MapPin, Users, Menu, X, LogIn, LogOut, User as UserIcon, Inbox as InboxIcon } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, Button, Input, Label } from "@/components/ui";
@@ -12,21 +12,22 @@ const NAV_ITEMS = [
   { href: "/grades", label: "Grade Converter", icon: Mountain },
   { href: "/gyms", label: "Gyms", icon: MapPin },
   { href: "/partners", label: "Partners", icon: Users },
+  { href: "/inbox", label: "Inbox", icon: InboxIcon, requiresAuth: true },
 ];
 
-function NavLink({ href, label, icon: Icon, onClick }: any) {
+function NavLink({ href, label, icon: Icon, onClick, disabled }: any) {
   const [isActive] = useRoute(href);
-  return (
-    <Link 
-      href={href} 
-      onClick={onClick}
-      className={cn(
-        "relative flex items-center gap-3 px-4 py-3 rounded-lg font-display text-xl tracking-wider transition-all duration-300 group overflow-hidden",
-        isActive 
-          ? "bg-primary/10 text-primary shadow-[0_0_15px_rgba(0,212,170,0.1)]" 
-          : "text-muted-foreground hover:bg-accent hover:text-foreground"
-      )}
-    >
+  const className = cn(
+    "relative flex items-center gap-3 px-4 py-3 rounded-lg font-display text-xl tracking-wider transition-all duration-300 group overflow-hidden",
+    disabled
+      ? "opacity-50 cursor-not-allowed bg-transparent text-muted-foreground"
+      : isActive
+        ? "bg-primary/10 text-primary shadow-[0_0_15px_rgba(0,212,170,0.1)]"
+        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+  );
+
+  const content = (
+    <>
       {isActive && (
         <motion.div 
           layoutId="activeNavIndicator"
@@ -38,6 +39,21 @@ function NavLink({ href, label, icon: Icon, onClick }: any) {
       )}
       <Icon className={cn("w-5 h-5 mb-0.5 relative z-10 transition-transform duration-300 group-hover:scale-110", isActive && "drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]")} />
       <span className="relative z-10">{label}</span>
+      {disabled ? (
+        <span className="ml-auto text-[10px] uppercase tracking-widest text-muted-foreground relative z-10">
+          Login
+        </span>
+      ) : null}
+    </>
+  );
+
+  return disabled ? (
+    <div className={className} title="Login required">
+      {content}
+    </div>
+  ) : (
+    <Link href={href} onClick={onClick} className={className}>
+      {content}
     </Link>
   );
 }
@@ -45,7 +61,7 @@ function NavLink({ href, label, icon: Icon, onClick }: any) {
 export function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [location] = useLocation();
-  const { user, userId, isConfigured, signIn, signUp, signOut } = useAuth();
+  const { user, userId, isConfigured, isLoading: authLoading, signIn, signUp, signOut } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
@@ -53,7 +69,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
 
-  const displayName = user?.email ?? (userId === "guest-user" ? "Guest User" : userId);
+  const displayName = authLoading
+    ? "Loading…"
+    : user?.email ?? (userId === "guest-user" ? "Guest User" : userId);
   const initials = (user?.email?.slice(0, 2) ?? "GU").toUpperCase();
 
   const submitAuth = async () => {
@@ -110,7 +128,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="flex flex-col gap-2">
                 {NAV_ITEMS.map((item) => (
-                  <NavLink key={item.href} {...item} onClick={() => setMobileOpen(false)} />
+                  <NavLink
+                    key={item.href}
+                    {...item}
+                    disabled={item.requiresAuth && !user}
+                    onClick={() => setMobileOpen(false)}
+                  />
                 ))}
               </div>
             </motion.div>
@@ -126,7 +149,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </Link>
         <div className="flex flex-col gap-2 flex-1">
           {NAV_ITEMS.map((item) => (
-            <NavLink key={item.href} {...item} />
+            <NavLink key={item.href} {...item} disabled={item.requiresAuth && !user} />
           ))}
         </div>
         <div className="mt-auto pt-6 border-t border-border">
@@ -150,8 +173,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 onClick={() => {
                   setAuthMode("login");
                   setAuthOpen(true);
+                  if (!isConfigured) {
+                    setAuthError("Auth not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in artifacts/cragmate/.env then restart the web dev server.");
+                  }
                 }}
-                disabled={!isConfigured}
               >
                 <LogIn className="w-4 h-4 mr-2" />
                 Login
@@ -168,13 +193,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
               onClick={() => {
                 setAuthMode("signup");
                 setAuthOpen(true);
+                if (!isConfigured) {
+                  setAuthError("Auth not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in artifacts/cragmate/.env then restart the web dev server.");
+                }
               }}
-              disabled={!isConfigured || Boolean(user)}
+              disabled={Boolean(user)}
             >
               <UserIcon className="w-4 h-4 mr-2" />
               Sign Up
             </Button>
           </div>
+          {!isConfigured && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Enable auth by adding <span className="font-mono">VITE_SUPABASE_URL</span> and{" "}
+              <span className="font-mono">VITE_SUPABASE_ANON_KEY</span> to{" "}
+              <span className="font-mono">artifacts/cragmate/.env</span>, then restart Vite.
+            </p>
+          )}
         </div>
       </div>
 
