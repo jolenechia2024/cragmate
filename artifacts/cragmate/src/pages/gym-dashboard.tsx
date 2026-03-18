@@ -27,7 +27,9 @@ export default function GymDashboard() {
 
   const normalizedSearch = search.trim().toLowerCase();
 
-  const gymsWithBrand = (gyms ?? []).map((g) => ({
+  const gymsArray = Array.isArray(gyms) ? gyms : [];
+
+  const gymsWithBrand = gymsArray.map((g) => ({
     ...g,
     brand: g.brand || g.name.split(" @")[0]?.trim() || g.name,
   }));

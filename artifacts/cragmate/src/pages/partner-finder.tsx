@@ -45,8 +45,10 @@ export default function PartnerFinder() {
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [messageDraft, setMessageDraft] = useState("");
   
-  const { data: posts, isLoading } = useListPartnerPosts();
-  const { data: gyms } = useListGyms();
+  const { data: postsRaw, isLoading } = useListPartnerPosts();
+  const posts = Array.isArray(postsRaw) ? postsRaw : [];
+  const { data: gymsRaw } = useListGyms();
+  const gyms = Array.isArray(gymsRaw) ? gymsRaw : [];
   
   const createMutation = useCreatePartnerPost({
     mutation: {

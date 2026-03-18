@@ -275,7 +275,9 @@ export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
 ): Promise<T> {
-  const { responseType = "auto", headers: headersInit, ...init } = options;
+  // Our API is JSON-only; default to JSON so HTML/404 responses don't silently
+  // flow through as strings and crash UIs expecting arrays/objects.
+  const { responseType = "json", headers: headersInit, ...init } = options;
 
   const method = resolveMethod(input, init.method);
 

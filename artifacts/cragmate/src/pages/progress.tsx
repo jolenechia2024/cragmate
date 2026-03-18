@@ -53,7 +53,20 @@ export default function Progress() {
     );
   }
 
-  if (!stats) return <Layout><div>No stats available.</div></Layout>;
+  const isValidStats =
+    stats &&
+    typeof stats === "object" &&
+    Array.isArray((stats as any).sessionsByMonth) &&
+    Array.isArray((stats as any).gradeDistribution) &&
+    Array.isArray((stats as any).progressionOverTime);
+
+  if (!isValidStats) {
+    return (
+      <Layout>
+        <div>No stats available.</div>
+      </Layout>
+    );
+  }
 
   // Teal and Green palette for charts
   const COLORS = ['#00d4aa', '#059669', '#10b981', '#34d399', '#6ee7b7'];
