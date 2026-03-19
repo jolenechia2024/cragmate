@@ -22,7 +22,7 @@ export default function Home() {
             Conquer <br/><span className="text-primary drop-shadow-[0_0_15px_rgba(0,212,170,0.4)]">The Crag</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl font-medium">
-            The ultimate companion for climbers. Track your sessions, visualize your progress, find buddies, and convert grades across all systems with ease. 
+            The ultimate companion for climbers. Track your sessions, visualize your progress, find buddies, and convert grades with ease. 
           </p>
           <div className="flex flex-wrap gap-4">
             <Link href="/sessions">

@@ -158,7 +158,7 @@ export default function PartnerFinder() {
     <Layout>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
         <div>
-          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Partner Finder</h1>
+          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Find a Partner</h1>
           <p className="text-muted-foreground text-base sm:text-lg">Need a belay or a projecting buddy? Post here.</p>
         </div>
         <Button size="lg" onClick={() => setIsDialogOpen(true)} className="gap-2 w-full md:w-auto">
