@@ -109,7 +109,7 @@ export default function GymDashboard() {
           {[1, 2, 3, 4].map(i => <div key={i} className="h-80 bg-card rounded-xl animate-pulse border border-border" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {brandGroups.map((group) => (
             <Card key={group.brand} className="overflow-hidden">
               <div className="h-36 bg-teal-950 relative overflow-hidden">

@@ -226,7 +226,7 @@ export default function Home() {
         
         <div className="relative z-10 p-5 sm:p-8 md:p-16 lg:p-24 flex flex-col items-start max-w-3xl">
           <Badge className="mb-6 border border-primary text-primary bg-primary/10 shadow-[0_0_10px_rgba(0,212,170,0.2)]">BETA ACCESS</Badge>
-          <h1 className="text-4xl sm:text-6xl md:text-8xl font-display uppercase leading-[0.9] sm:leading-[0.85] text-white mb-4 sm:mb-6">
+          <h1 className="text-5xl sm:text-6xl md:text-8xl font-display uppercase leading-[0.9] sm:leading-[0.85] text-white mb-4 sm:mb-6">
             Conquer <br/><span className="text-primary drop-shadow-[0_0_15px_rgba(0,212,170,0.4)]">The Crag</span>
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-10 max-w-xl font-medium">
@@ -367,7 +367,7 @@ export default function Home() {
           ) : (
             <div className="mt-6 rounded-xl border border-border bg-background/40 p-5">
               <p className="text-xs uppercase tracking-widest text-muted-foreground">Your result</p>
-              <p className="font-display text-4xl mt-2 text-primary drop-shadow-[0_0_10px_rgba(0,212,170,0.15)] break-words">
+              <p className="font-display text-3xl sm:text-4xl mt-2 text-primary drop-shadow-[0_0_10px_rgba(0,212,170,0.15)] break-words">
                 {resultType}
               </p>
 
