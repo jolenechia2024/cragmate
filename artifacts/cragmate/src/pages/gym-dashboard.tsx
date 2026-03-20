@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout";
 import { Card, Input, Badge, Button } from "@/components/ui";
 import { useListGyms, type Gym } from "@workspace/api-client-react";
 import { useState } from "react";
-import { Search, MapPin, Clock, DollarSign, ExternalLink, Calendar } from "lucide-react";
+import { Search, MapPin, Clock, ExternalLink, Calendar, Sparkles } from "lucide-react";
 
 function formatUpdatedAt(value?: string) {
   if (!value) return undefined;
@@ -84,6 +84,19 @@ export default function GymDashboard() {
           className="pl-12 text-lg h-14 bg-card shadow-lg border-primary/20 focus-visible:shadow-[0_0_15px_rgba(0,212,170,0.1)]"
         />
       </div>
+
+      <Card className="mb-8 p-4 border-primary/20 bg-card/60">
+        <div className="flex items-start gap-3">
+          <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-foreground">Beginner recommendations</p>
+            <p className="text-muted-foreground mt-1">
+              Start with VB-V2 problems, pick gyms with clear beginner circuits, and aim for movement quality over grade.
+              A good first session is 6-12 easy climbs with plenty of rest.
+            </p>
+          </div>
+        </div>
+      </Card>
 
       {isLoading ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -167,6 +180,9 @@ export default function GymDashboard() {
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
+                        <Badge variant="default" className="bg-primary/10 border border-primary/30 text-primary">
+                          Beginner start: VB-V2
+                        </Badge>
                         <Badge variant="default" className="bg-teal-950 border border-teal-900">
                           Day pass: {formatPrice(gym.dayPassPrice) ?? "N/A"}
                         </Badge>

@@ -44,24 +44,6 @@ export default function Progress() {
     { query: { enabled: Boolean(user), queryKey: getGetStatsQueryKey({ userId }) } },
   );
 
-  if (!user) {
-    return (
-      <Layout>
-        <div className="mb-8">
-          <h1 className="text-5xl font-display uppercase tracking-widest mb-2">
-            Progress
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Please log in to view your progression stats.
-          </p>
-        </div>
-        <Card className="p-10 border-dashed border-primary/20 text-center">
-          <p className="text-muted-foreground">Guest mode is disabled for progress.</p>
-        </Card>
-      </Layout>
-    );
-  }
-
   if (isLoading) {
     return (
       <Layout>
@@ -80,14 +62,17 @@ export default function Progress() {
     Array.isArray((stats as any).sessionsByMonth) &&
     Array.isArray((stats as any).gradeDistribution) &&
     Array.isArray((stats as any).progressionOverTime);
-
-  if (!isValidStats) {
-    return (
-      <Layout>
-        <div>No stats available.</div>
-      </Layout>
-    );
-  }
+  const displayStats = isValidStats
+    ? (stats as any)
+    : {
+        totalSessions: 0,
+        totalClimbs: 0,
+        totalSends: 0,
+        topGradeEver: "N/A",
+        sessionsByMonth: [],
+        gradeDistribution: [],
+        progressionOverTime: [],
+      };
 
   // Teal and Green palette for charts
   const COLORS = ['#00d4aa', '#059669', '#10b981', '#34d399', '#6ee7b7'];
@@ -96,29 +81,31 @@ export default function Progress() {
     <Layout>
       <div className="mb-8">
         <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Progress</h1>
-        <p className="text-muted-foreground text-base sm:text-lg">Your climbing journey in numbers.</p>
+        <p className="text-muted-foreground text-base sm:text-lg">
+          {user ? "Your climbing journey in numbers." : "Preview your progress dashboard."}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Card className="p-6 flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-transform duration-300 hover:shadow-[0_0_15px_rgba(0,212,170,0.1)] hover:border-primary/30">
           <Activity className="w-8 h-8 text-primary mb-2 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Sessions</p>
-          <p className="text-3xl sm:text-4xl font-display text-foreground"><AnimatedCounter value={stats.totalSessions} /></p>
+          <p className="text-3xl sm:text-4xl font-display text-foreground"><AnimatedCounter value={displayStats.totalSessions} /></p>
         </Card>
         <Card className="p-6 flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-transform duration-300 hover:shadow-[0_0_15px_rgba(0,212,170,0.1)] hover:border-primary/30">
           <Target className="w-8 h-8 text-emerald-400 mb-2 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Total Climbs</p>
-          <p className="text-3xl sm:text-4xl font-display text-foreground"><AnimatedCounter value={stats.totalClimbs} /></p>
+          <p className="text-3xl sm:text-4xl font-display text-foreground"><AnimatedCounter value={displayStats.totalClimbs} /></p>
         </Card>
         <Card className="p-6 flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-transform duration-300 hover:shadow-[0_0_15px_rgba(0,212,170,0.1)] hover:border-primary/30">
           <Flame className="w-8 h-8 text-teal-400 mb-2 drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]" />
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Sends</p>
-          <p className="text-3xl sm:text-4xl font-display text-foreground"><AnimatedCounter value={stats.totalSends} /></p>
+          <p className="text-3xl sm:text-4xl font-display text-foreground"><AnimatedCounter value={displayStats.totalSends} /></p>
         </Card>
         <Card className="p-6 flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-transform duration-300 hover:shadow-[0_0_15px_rgba(0,212,170,0.1)] hover:border-primary/30">
           <Trophy className="w-8 h-8 text-yellow-400 mb-2 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Max Grade</p>
-          <p className="text-3xl sm:text-4xl font-display text-primary drop-shadow-[0_0_5px_rgba(0,212,170,0.3)]">{stats.topGradeEver || 'N/A'}</p>
+          <p className="text-3xl sm:text-4xl font-display text-primary drop-shadow-[0_0_5px_rgba(0,212,170,0.3)]">{displayStats.topGradeEver || "N/A"}</p>
         </Card>
       </div>
 
@@ -127,7 +114,7 @@ export default function Progress() {
           <h3 className="text-xl font-display uppercase tracking-widest mb-6">Top Grade Over Time</h3>
           <div className="h-72 w-full">
             <ResponsiveContainer>
-              <LineChart data={stats.progressionOverTime}>
+              <LineChart data={displayStats.progressionOverTime}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#134e4a" vertical={false} />
                 <XAxis dataKey="date" stroke="#99f6e4" tick={{ fill: '#99f6e4', fontSize: 12 }} />
                 <YAxis stroke="#99f6e4" tick={{ fill: '#99f6e4', fontSize: 12 }} />
@@ -145,7 +132,7 @@ export default function Progress() {
           <h3 className="text-xl font-display uppercase tracking-widest mb-6">Sessions by Month</h3>
           <div className="h-72 w-full">
             <ResponsiveContainer>
-              <BarChart data={stats.sessionsByMonth}>
+              <BarChart data={displayStats.sessionsByMonth}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#134e4a" vertical={false} />
                 <XAxis dataKey="month" stroke="#99f6e4" tick={{ fill: '#99f6e4', fontSize: 12 }} />
                 <YAxis stroke="#99f6e4" tick={{ fill: '#99f6e4', fontSize: 12 }} allowDecimals={false} />
@@ -166,7 +153,7 @@ export default function Progress() {
           <ResponsiveContainer>
             <PieChart>
               <Pie
-                data={stats.gradeDistribution}
+                data={displayStats.gradeDistribution}
                 cx="50%"
                 cy="50%"
                 innerRadius={80}
@@ -177,7 +164,7 @@ export default function Progress() {
                 label={({ grade, count }) => `${grade} (${count})`}
                 labelLine={{ stroke: '#99f6e4' }}
               >
-                {stats.gradeDistribution.map((entry, index) => (
+                {displayStats.gradeDistribution.map((entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

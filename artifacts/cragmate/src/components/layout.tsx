@@ -2,13 +2,14 @@ import { Link, useRoute, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Mountain, Activity, NotebookPen, MapPin, Users, Menu, X, LogIn, LogOut, User as UserIcon, Inbox as InboxIcon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { getStreak } from "@/lib/streak";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, Button, Input, Label } from "@/components/ui";
 import { useAuth } from "@/auth/AuthProvider";
 
 const NAV_ITEMS = [
   { href: "/sessions", label: "Sessions", icon: NotebookPen, requiresAuth: true },
-  { href: "/progress", label: "Progress", icon: Activity, requiresAuth: true },
+  { href: "/progress", label: "Progress", icon: Activity, requiresAuth: false },
   { href: "/grades", label: "Grade Converter", icon: Mountain },
   { href: "/gyms", label: "Gyms", icon: MapPin },
   { href: "/partners", label: "Partners", icon: Users },
@@ -79,6 +80,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
     ? "Loading…"
     : user?.email ?? (userId === "guest-user" ? "Guest User" : userId);
   const initials = (user?.email?.slice(0, 2) ?? "GU").toUpperCase();
+  const username = user?.email ? user.email.split("@")[0] : "";
+
+  const [streak, setStreak] = useState(() => getStreak().currentStreak);
 
   const submitAuth = async () => {
     const now = Date.now();
@@ -100,8 +104,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         const result = await signUp(email, password);
         if (result.needsEmailConfirmation) {
           setAuthMode("login");
+          const name = email.trim().split("@")[0] || "climber";
           setAuthError(
-            "Account created. Please check your email and confirm your address before logging in.",
+            `Welcome, ${name}! Please check your email and confirm your address before logging in.`,
           );
           setPassword("");
           return;
@@ -142,6 +147,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("cragmate:open-auth", onOpenAuth as EventListener);
     return () => window.removeEventListener("cragmate:open-auth", onOpenAuth as EventListener);
+  }, []);
+
+  useEffect(() => {
+    const onStreak = () => setStreak(getStreak().currentStreak);
+    window.addEventListener("cragmate:streak-updated", onStreak as EventListener);
+    return () =>
+      window.removeEventListener("cragmate:streak-updated", onStreak as EventListener);
   }, []);
 
   return (
@@ -201,8 +213,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <div className="min-w-0">
                     <p className="font-semibold text-foreground truncate">{displayName}</p>
                     <p className="text-[11px] uppercase tracking-wider text-primary/80">
-                      {user ? "Signed in" : "Guest mode"}
+                      {user ? `Welcome, ${username}` : "Guest mode"}
                     </p>
+                    {user ? (
+                      <p className="text-[11px] text-muted-foreground/90 truncate whitespace-nowrap">
+                        Streak: {streak} day{streak === 1 ? "" : "s"}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
@@ -293,8 +310,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="min-w-0">
               <p className="font-semibold text-foreground truncate">{displayName}</p>
               <p className="text-xs uppercase tracking-wider text-primary/80">
-                {user ? "Signed in" : "Guest mode"}
+                {user ? `Welcome, ${username}` : "Guest mode"}
               </p>
+              {user ? (
+                <p className="text-[11px] text-muted-foreground/90 truncate whitespace-nowrap mt-1">
+                  Streak: {streak} day{streak === 1 ? "" : "s"}
+                </p>
+              ) : null}
             </div>
           </div>
 

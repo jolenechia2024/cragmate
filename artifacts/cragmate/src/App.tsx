@@ -12,6 +12,7 @@ import Progress from "@/pages/progress";
 import GymDashboard from "@/pages/gym-dashboard";
 import PartnerFinder from "@/pages/partner-finder";
 import Inbox from "@/pages/inbox";
+import Beginner from "@/pages/beginner";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/gyms" component={GymDashboard} />
       <Route path="/partners" component={PartnerFinder} />
       <Route path="/inbox" component={Inbox} />
+      <Route path="/beginner" component={Beginner} />
       <Route component={NotFound} />
     </Switch>
   );

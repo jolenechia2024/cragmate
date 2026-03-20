@@ -9,7 +9,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Calendar, Activity } from "lucide-react";
+import { Plus, Calendar, Activity, Sparkles, Lightbulb } from "lucide-react";
+import { bumpClimbingStreak } from "@/lib/streak";
 
 const sessionSchema = z.object({
   gymId: z.coerce.number().min(1, "Please select a gym"),
@@ -21,6 +22,8 @@ export default function SessionLogger() {
   const queryClient = useQueryClient();
   const { userId, user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [sessionTemplate, setSessionTemplate] = useState("custom");
+  const [confidence, setConfidence] = useState("3");
 
   const { data: sessionsRaw, isLoading } = useListSessions(
     { userId },
@@ -45,6 +48,9 @@ export default function SessionLogger() {
   const createMutation = useCreateSession({
     mutation: {
       onSuccess: () => {
+        // Local-only streak (increments when you successfully log a session).
+        bumpClimbingStreak();
+        window.dispatchEvent(new CustomEvent("cragmate:streak-updated"));
         queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId }) });
         setIsDialogOpen(false);
         reset();
@@ -59,6 +65,23 @@ export default function SessionLogger() {
     }
   });
 
+  const SESSION_TEMPLATES: Record<string, string> = {
+    custom: "",
+    beginner:
+      "Beginner template:\n- Warm-up: 10 mins easy movement\n- Goal: 6-10 climbs in VB-V2\n- Focus: quiet feet + balance\n- Cooldown: light stretch",
+    endurance:
+      "Endurance template:\n- Warm-up: 10 mins\n- 3 rounds of easier continuous climbing\n- Rest 2 mins between rounds\n- Notes: pacing + breathing",
+    project:
+      "Project template:\n- Warm-up + 2 easy benchmark climbs\n- Pick 1-2 project routes\n- 3-5 quality attempts per route\n- Record crux + beta changes",
+  };
+
+  const coachPrompt =
+    confidence === "1" || confidence === "2"
+      ? "Coach tip: If confidence is low today, drop 1 grade and focus on movement quality."
+      : confidence === "5"
+        ? "Coach tip: Confidence is high. Keep one hard challenge, but maintain good rest between tries."
+        : "Coach tip: Aim for consistent pacing and clean footwork.";
+
   const onSubmit = (data: z.infer<typeof sessionSchema>) => {
     if (!user) {
       window.dispatchEvent(
@@ -69,7 +92,12 @@ export default function SessionLogger() {
       return;
     }
 
-    createMutation.mutate({ data: { ...data, userId } });
+    const templateNotes = SESSION_TEMPLATES[sessionTemplate];
+    const mergedNotes = [templateNotes, data.notes?.trim() ? `\nPersonal notes:\n${data.notes.trim()}` : "", `\nConfidence (1-5): ${confidence}`]
+      .filter(Boolean)
+      .join("\n");
+
+    createMutation.mutate({ data: { ...data, notes: mergedNotes, userId } });
   };
 
   return (
@@ -83,6 +111,18 @@ export default function SessionLogger() {
           <Plus className="w-5 h-5" /> Log Session
         </Button>
       </div>
+
+      <Card className="mb-6 p-4 border-primary/20 bg-card/60">
+        <div className="flex items-start gap-3">
+          <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-foreground">Beginner session guide</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Try VB-V2 first, keep rests long, and track confidence to spot patterns over time.
+            </p>
+          </div>
+        </div>
+      </Card>
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -149,6 +189,19 @@ export default function SessionLogger() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} title="Log New Session">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
+            <Label>Session template</Label>
+            <Select value={sessionTemplate} onChange={(e) => setSessionTemplate(e.target.value)}>
+              <option value="custom">Custom</option>
+              <option value="beginner">Beginner (first sessions)</option>
+              <option value="endurance">Endurance</option>
+              <option value="project">Project day</option>
+            </Select>
+            <div className="mt-2 text-xs text-muted-foreground whitespace-pre-line">
+              {SESSION_TEMPLATES[sessionTemplate] || "Create your own structure."}
+            </div>
+          </div>
+
+          <div>
             <Label>Gym</Label>
             <Select {...register("gymId")}>
               <option value="">Select a gym</option>
@@ -168,6 +221,21 @@ export default function SessionLogger() {
           <div>
             <Label>Notes (Optional)</Label>
             <Textarea placeholder="How did you feel today?" {...register("notes")} />
+          </div>
+
+          <div>
+            <Label>Confidence (1-5)</Label>
+            <Select value={confidence} onChange={(e) => setConfidence(e.target.value)}>
+              <option value="1">1 - Very low</option>
+              <option value="2">2 - Low</option>
+              <option value="3">3 - Neutral</option>
+              <option value="4">4 - Good</option>
+              <option value="5">5 - Great</option>
+            </Select>
+            <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
+              <Lightbulb className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <span>{coachPrompt}</span>
+            </div>
           </div>
           
           <Button type="submit" className="w-full" disabled={createMutation.isPending}>

@@ -1,7 +1,8 @@
 import { Layout } from "@/components/layout";
-import { Button } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { Link } from "wouter";
-import { ArrowRight, Mountain, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Compass, Mountain, TrendingUp, Users } from "lucide-react";
+import type { ReactNode } from "react";
 
 export default function Home() {
   return (
@@ -62,11 +63,33 @@ export default function Home() {
           <p className="text-muted-foreground">No belay/climbing partner? No worries. Post your planned sessions and connect with the community!</p>
         </div>
       </div>
+
+      <Card className="mt-8 p-6 border-primary/20 bg-card/60">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
+              <Compass className="w-5 h-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-2xl font-display uppercase tracking-wider">First time climbing?</h3>
+              <p className="text-muted-foreground mt-2">
+                Click here for a beginner checklist + quick technique tips.
+              </p>
+            </div>
+          </div>
+
+          <Link href="/beginner">
+            <Button className="shrink-0" size="lg">
+              Click here <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          </Link>
+        </div>
+      </Card>
     </Layout>
   );
 }
 
-function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
+function Badge({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold tracking-widest uppercase ${className}`}>
       {children}

@@ -238,19 +238,24 @@ export default function GradeConverter() {
       return { label: "Beginner", sub: "0–3 months", hue: "bg-teal-950 border border-teal-900", text: "text-teal-200" };
     }
     if (v === "V2") {
-      return { label: "Beginner / Intermediate", sub: "0–3 months / 3m–1.5y", hue: "bg-teal-950/40 border border-teal-900", text: "text-teal-100" };
+      return {
+        label: "Beginner / Intermediate",
+        sub: "0–3 months / 3 months–1.5 years",
+        hue: "bg-teal-950/40 border border-teal-900",
+        text: "text-teal-100",
+      };
     }
     if (v === "V3") {
       return { label: "Intermediate", sub: "3 months–1.5 years", hue: "bg-blue-950/40 border border-blue-900", text: "text-blue-100" };
     }
     if (v === "V4") {
-      return { label: "Intermediate / Advanced", sub: "3m–1.5y / 1.5–3y", hue: "bg-blue-950/30 border border-blue-900", text: "text-blue-100" };
+      return { label: "Intermediate / Advanced", sub: "3 months–1.5 years / 1.5–3 years", hue: "bg-blue-950/30 border border-blue-900", text: "text-blue-100" };
     }
     if (v === "V5") {
       return { label: "Advanced", sub: "1.5–3 years", hue: "bg-purple-950/30 border border-purple-900", text: "text-purple-100" };
     }
     if (v === "V6") {
-      return { label: "Advanced / Expert", sub: "1.5–3y / several+ years", hue: "bg-purple-950/20 border border-purple-900", text: "text-purple-100" };
+      return { label: "Advanced / Expert", sub: "1.5–3 years / several+ years", hue: "bg-purple-950/20 border border-purple-900", text: "text-purple-100" };
     }
     // V7+ (and any future grades)
     return { label: "Expert", sub: "several years +", hue: "bg-amber-950/20 border border-amber-900", text: "text-amber-100" };
@@ -352,7 +357,7 @@ export default function GradeConverter() {
                     return (
                       <span
                         className={cn(
-                          "inline-flex items-center justify-center min-w-[5rem] px-4 py-1.5 rounded-md font-bold tracking-wider uppercase text-sm shadow-sm",
+                          "inline-flex items-center justify-center min-w-[6rem] max-w-[6rem] min-h-[3rem] px-2 py-1.5 rounded-md font-bold tracking-wider uppercase text-[11px] shadow-sm",
                           theme.hue,
                           theme.text,
                           selectedGrade === grade.v ? "scale-105 transition-transform" : "transition-transform",
@@ -370,15 +375,14 @@ export default function GradeConverter() {
                     return (
                       <span
                         className={cn(
-                          "inline-flex flex-col items-end gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold",
+                          "inline-flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm min-w-[9rem] max-w-[9rem] min-h-[3rem] leading-tight text-center",
                           exp.hue,
                           exp.text,
-                          "shadow-sm",
                         )}
                         title={exp.sub}
                       >
                         <span className="uppercase tracking-wider">{exp.label}</span>
-                        <span className="opacity-80 font-medium normal-case">{exp.sub}</span>
+                        <span className="opacity-80 font-medium normal-case leading-tight">{exp.sub}</span>
                       </span>
                     );
                   })()}
@@ -419,7 +423,7 @@ export default function GradeConverter() {
                   </div>
                   <span
                     className={cn(
-                      "inline-flex items-center justify-center px-3 py-1.5 rounded-md font-bold tracking-wider uppercase text-xs shadow-sm shrink-0",
+                      "inline-flex items-center justify-center min-w-[6.5rem] max-w-[6.5rem] min-h-[3rem] px-2 py-1.5 rounded-md font-bold tracking-wider uppercase text-xs shadow-sm shrink-0",
                       theme.hue,
                       theme.text,
                     )}
@@ -432,15 +436,14 @@ export default function GradeConverter() {
                 <div className="mt-3 flex items-start justify-between gap-3">
                   <span
                     className={cn(
-                      "inline-flex flex-col items-start gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold",
+                      "inline-flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm min-w-[8.5rem] max-w-[9rem] min-h-[3rem] leading-tight text-center shrink-0",
                       exp.hue,
                       exp.text,
-                      "shadow-sm",
                     )}
                     title={exp.sub}
                   >
                     <span className="uppercase tracking-wider">{exp.label}</span>
-                    <span className="opacity-80 font-medium normal-case">{exp.sub}</span>
+                    <span className="opacity-80 font-medium normal-case leading-tight">{exp.sub}</span>
                   </span>
 
                   <span className="text-xs text-muted-foreground">
