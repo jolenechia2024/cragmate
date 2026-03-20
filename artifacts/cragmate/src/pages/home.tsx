@@ -1,12 +1,19 @@
 import { Layout } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
+import { CLIMB_BOOSTS } from "@/lib/climb-boosts";
 import { Link } from "wouter";
 import { ArrowRight, Compass, Mountain, TrendingUp, Users } from "lucide-react";
 import { useEffect, useMemo, useState, useRef, type ReactNode, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { animate, motion, useMotionValue } from "framer-motion";
 
 export default function Home() {
-  const QUIZ_STORAGE_KEY = "cragmate_climber_quiz_v2";
+const QUIZ_STORAGE_KEY = "cragmate_climber_quiz_v2";
+const FOLLOW_UP_FUNNY_BOOSTS = [
+  "Uh..what are you waiting for? Go hit the wall now.",
+  "Clock in. Your project is not sending itself.",
+  "Main character moment: pull on and cause chaos.",
+  "Enough pep talk. Time for chalk talk.",
+] as const;
 
   type ClimberType =
     | "Technician"
@@ -126,6 +133,10 @@ export default function Home() {
   const [isFeatureBoulderInView, setIsFeatureBoulderInView] = useState(false);
   const [isQuizSurprisePending, setIsQuizSurprisePending] = useState(false);
   const [hasRevealedQuizSurprise, setHasRevealedQuizSurprise] = useState(false);
+  const [isSurpriseHintOpen, setIsSurpriseHintOpen] = useState(false);
+  const [surpriseTapPulseNonce, setSurpriseTapPulseNonce] = useState(0);
+  const [surpriseBoostTapCount, setSurpriseBoostTapCount] = useState(0);
+  const [activeBoost, setActiveBoost] = useState<string>(CLIMB_BOOSTS[0] ?? "You got this.");
   const featureBoulderSectionRef = useRef<HTMLDivElement | null>(null);
 
   function getQuizSurpriseStyle(type: ClimberType): { glow: string; border: string; bg: string } {
@@ -227,6 +238,20 @@ export default function Home() {
     setHasRevealedQuizSurprise(true);
     setIsQuizSurprisePending(false);
   }, [hasRevealedQuizSurprise, isFeatureBoulderInView, isQuizSurprisePending]);
+
+  useEffect(() => {
+    if (!isSurpriseHintOpen) return;
+    const t = window.setTimeout(() => setIsSurpriseHintOpen(false), 3200);
+    return () => window.clearTimeout(t);
+  }, [isSurpriseHintOpen]);
+
+  function triggerHapticStyleEffect() {
+    // Soft double buzz to mimic haptic feedback on supported devices.
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate([18, 24, 18]);
+    }
+    setSurpriseTapPulseNonce((n) => n + 1);
+  }
 
   function snapBoulderToFeature(nextIdx: number) {
     // Snap to the old “120deg per feature” dial positions, but pick the closest
@@ -432,8 +457,8 @@ export default function Home() {
         </div>
       </div>
 
-      <div ref={featureBoulderSectionRef}>
-        <Card className="p-6 sm:p-8 border-none bg-transparent">
+      <div ref={featureBoulderSectionRef} className="overflow-visible">
+        <Card className="overflow-visible p-6 sm:p-8 border-none bg-transparent">
         <div className="text-center mb-6">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Feature Boulder</p>
           <h2 className="font-display text-2xl sm:text-3xl uppercase tracking-wider mt-2">
@@ -441,8 +466,8 @@ export default function Home() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 sm:gap-8 items-center">
-          <div className="flex flex-col items-center">
+        <div className="overflow-visible grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 sm:gap-8 items-center">
+          <div className="flex flex-col items-center overflow-visible py-4 sm:py-6">
             <motion.div
               whileTap={{ cursor: "grabbing" }}
               onPointerDown={handleBoulderPointerDown}
@@ -450,7 +475,7 @@ export default function Home() {
               onPointerUp={handleBoulderPointerUp}
               onPointerCancel={handleBoulderPointerUp}
               style={{ rotate: boulderRotation }}
-              className={`relative overflow-hidden w-72 h-64 sm:w-80 sm:h-72 md:w-[28rem] md:h-[22rem] touch-none select-none ${isBoulderDragging ? "cursor-grabbing" : "cursor-grab"}`}
+              className={`relative w-[20rem] h-[16rem] sm:w-[24rem] sm:h-[18rem] md:w-[30rem] md:h-[22rem] touch-none select-none ${isBoulderDragging ? "cursor-grabbing" : "cursor-grab"}`}
             >
               {/* Main irregular boulder body (Fountainebleau-ish silhouette) */}
               {/* Outer glowing outline (clipped to boulder silhouette) */}
@@ -641,10 +666,31 @@ export default function Home() {
                 );
               })}
 
-              {/* Quiz surprise hold (extra, non-clickable) */}
+              {/* Quiz surprise hold (tap for mini wow) */}
               {resultType && quizSurpriseHoldConfig && (
-                <span
-                  className="absolute z-20 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                <button
+                  type="button"
+                  aria-label="Surprise hold"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHapticStyleEffect();
+                    if (surpriseBoostTapCount === 0) {
+                      const randomBoost =
+                        CLIMB_BOOSTS[Math.floor(Math.random() * CLIMB_BOOSTS.length)] ??
+                        "Stay calm, trust your feet, and have fun.";
+                      setActiveBoost(randomBoost);
+                    } else {
+                      const followUpBoost =
+                        FOLLOW_UP_FUNNY_BOOSTS[
+                          (surpriseBoostTapCount - 1) % FOLLOW_UP_FUNNY_BOOSTS.length
+                        ] ?? "Go hit the wall now.";
+                      setActiveBoost(followUpBoost);
+                    }
+                    setSurpriseBoostTapCount((n) => n + 1);
+                    setIsSurpriseHintOpen(true);
+                  }}
+                  className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 ${isBoulderDragging ? "pointer-events-none" : "pointer-events-auto cursor-pointer"}`}
                   style={{
                     left: quizSurpriseHoldConfig.pos.left,
                     top: quizSurpriseHoldConfig.pos.top,
@@ -886,8 +932,41 @@ export default function Home() {
                         </span>
                       </>
                     )}
+
+                    {/* Tap pulse: visual haptic fallback on desktop/iOS without vibration */}
+                    {surpriseTapPulseNonce > 0 && (
+                      <motion.span
+                        key={`surprise-tap-pulse-${surpriseTapPulseNonce}`}
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                        style={{
+                          width: "92%",
+                          height: "92%",
+                          border: "1.5px solid rgba(255,255,255,0.70)",
+                          boxShadow: `0 0 0 1px ${quizSurpriseHoldConfig.border}, 0 0 18px ${quizSurpriseHoldConfig.glow}`,
+                        }}
+                        initial={{ scale: 0.72, opacity: 0.95 }}
+                        animate={{ scale: 1.18, opacity: 0 }}
+                        transition={{ duration: 0.34, ease: "easeOut" }}
+                      />
+                    )}
                   </span>
-                </span>
+                  {isSurpriseHintOpen && (
+                    <motion.span
+                      className="absolute left-1/2 -top-24 sm:-top-28 -translate-x-1/2 w-[15rem] sm:w-[18rem] rounded-xl border border-primary/40 bg-background/95 px-3 py-2 text-[11px] sm:text-xs text-foreground shadow-[0_0_24px_rgba(0,212,170,0.22)]"
+                      initial={{ opacity: 0, y: 10, scale: 0.85 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.28, ease: "easeOut" }}
+                    >
+                      <span className="block font-semibold text-primary">
+                        ✨ Boom! Today's secret climb boost
+                      </span>
+                      <span className="block mt-1 leading-snug text-foreground/90">
+                        {activeBoost}
+                      </span>
+                    </motion.span>
+                  )}
+                </button>
               )}
 
               {[
