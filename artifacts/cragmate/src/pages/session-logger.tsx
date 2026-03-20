@@ -4,12 +4,12 @@ import { useListSessions, useCreateSession, useListGyms, getListSessionsQueryKey
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
 import { Link } from "wouter";
-import { useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Calendar, Activity, Sparkles, Lightbulb } from "lucide-react";
+import { Plus, Calendar, Activity, Sparkles, Lightbulb, Check } from "lucide-react";
 import { bumpClimbingStreak } from "@/lib/streak";
 
 const sessionSchema = z.object({
@@ -22,8 +22,65 @@ export default function SessionLogger() {
   const queryClient = useQueryClient();
   const { userId, user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isClimbPreviewOpen, setIsClimbPreviewOpen] = useState(false);
+  const [isGuestGuideOpen, setIsGuestGuideOpen] = useState(false);
   const [sessionTemplate, setSessionTemplate] = useState("custom");
   const [confidence, setConfidence] = useState("3");
+  const [previewSessionName, setPreviewSessionName] = useState<string>("Sample Gym");
+  const [previewSessionDate, setPreviewSessionDate] = useState<string>(new Date().toISOString().split("T")[0]);
+
+  // Guest-only "log climb" preview state (not saved to the API).
+  const [previewGradeSystem, setPreviewGradeSystem] = useState<"V-Scale" | "Font" | "Color">("V-Scale");
+  const [previewGrade, setPreviewGrade] = useState<string>("V3");
+  const [previewStyle, setPreviewStyle] = useState<string>("Vertical");
+  const [previewAttempts, setPreviewAttempts] = useState<number>(1);
+  const [previewSent, setPreviewSent] = useState<boolean>(true);
+  const [previewNotes, setPreviewNotes] = useState<string>("Quiet feet, smooth pacing.");
+
+  const [guestBestV, setGuestBestV] = useState<number>(0);
+
+  useEffect(() => {
+    if (!user) {
+      const raw = window.localStorage.getItem("cragmate_guest_best_v1");
+      if (raw) {
+        const parsed = Number(raw);
+        if (!Number.isNaN(parsed) && parsed > 0) setGuestBestV(parsed);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      setIsGuestGuideOpen(false);
+      return;
+    }
+    const seen = window.localStorage.getItem("cragmate_guest_climb_guide_seen_v1");
+    if (seen !== "1") {
+      setIsGuestGuideOpen(true);
+      window.localStorage.setItem("cragmate_guest_climb_guide_seen_v1", "1");
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const onStreak = () => {
+      // no-op; keeps pattern consistent if later you want more preview wiring
+    };
+    window.addEventListener("cragmate:streak-updated", onStreak as EventListener);
+    return () => window.removeEventListener("cragmate:streak-updated", onStreak as EventListener);
+  }, []);
+
+  function parseVScaleNumeric(grade: string): number | null {
+    // Accept formats like V3, v10+, V0. Ignore V14+ -> 14 (still useful for "highest so far").
+    const m = String(grade).trim().match(/^[Vv]\s*(\d+)/);
+    if (!m) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  const previewBestLabel = useMemo(() => {
+    if (guestBestV <= 0) return "N/A";
+    return `V${guestBestV}`;
+  }, [guestBestV]);
 
   const { data: sessionsRaw, isLoading } = useListSessions(
     { userId },
@@ -143,7 +200,16 @@ export default function SessionLogger() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedSessions.map((session) => {
             const CardEl = (
-              <Card className="h-full hover:border-primary/80 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] relative overflow-hidden">
+              <Card
+                className="h-full hover:border-primary/80 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] relative overflow-hidden"
+                onClick={() => {
+                  if (isGuest) {
+                    setPreviewSessionName(session.gymName);
+                    setPreviewSessionDate(String(session.date));
+                    setIsClimbPreviewOpen(true);
+                  }
+                }}
+              >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 <div className="p-6 flex flex-col h-full relative z-10">
                   <div className="flex justify-between items-start mb-4">
@@ -249,6 +315,179 @@ export default function SessionLogger() {
           ) : null}
         </form>
       </Dialog>
+
+      <Dialog open={isGuestGuideOpen} onOpenChange={setIsGuestGuideOpen} title="How climb logging works">
+        <div className="space-y-5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
+              <Check className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-display text-xl uppercase tracking-wider leading-tight">
+                Log a session, then log climbs
+              </p>
+              <p className="text-muted-foreground mt-2">
+                In guest mode you can preview climb logging: choose grade system + grade, style, attempts, and sent/project status.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              className="flex-1"
+              onClick={() => {
+                setIsGuestGuideOpen(false);
+                setIsClimbPreviewOpen(true);
+              }}
+            >
+              Open climb preview
+            </Button>
+            <Button variant="outline" className="flex-1" onClick={() => setIsGuestGuideOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog open={isClimbPreviewOpen} onOpenChange={setIsClimbPreviewOpen} title={user ? "Log Climb (Preview)" : "Log Climb (Guest Preview)"}>
+        <div className="space-y-6">
+          <div className="rounded-xl border border-border bg-background/40 p-4">
+            <p className="text-muted-foreground text-xs uppercase tracking-widest">Session</p>
+            <p className="font-display text-2xl mt-1">{previewSessionName}</p>
+            <p className="text-muted-foreground mt-1">{previewSessionDate}</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Grade System</Label>
+              <Select value={previewGradeSystem} onChange={(e) => setPreviewGradeSystem(e.target.value as any)}>
+                <option value="V-Scale">V-Scale</option>
+                <option value="Font">Font</option>
+                <option value="Color">Gym Color</option>
+              </Select>
+            </div>
+            <div>
+              <Label>Grade</Label>
+              <Input value={previewGrade} onChange={(e) => setPreviewGrade(e.target.value)} placeholder="e.g. V4" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Style</Label>
+              <Select value={previewStyle} onChange={(e) => setPreviewStyle(e.target.value)}>
+                <option value="">Select style...</option>
+                <option value="Slab">Slab</option>
+                <option value="Overhang">Overhang</option>
+                <option value="Vertical">Vertical</option>
+                <option value="Dynamic">Dynamic/Coordination</option>
+                <option value="Crimpy">Crimpy</option>
+              </Select>
+            </div>
+            <div>
+              <Label>Attempts</Label>
+              <Input
+                type="number"
+                min={1}
+                value={previewAttempts}
+                onChange={(e) => setPreviewAttempts(Math.max(1, Number(e.target.value) || 1))}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="flex items-center gap-2 cursor-pointer bg-card p-4 rounded-lg border border-border">
+              <input
+                type="checkbox"
+                className="w-5 h-5 accent-primary"
+                checked={previewSent}
+                onChange={(e) => setPreviewSent(e.target.checked)}
+              />
+              <span className="text-base text-foreground">{previewSent ? "Did you send it?" : "Project (not sent yet)"}</span>
+            </Label>
+          </div>
+
+          <div>
+            <Label>Notes (Optional)</Label>
+            <Textarea value={previewNotes} onChange={(e) => setPreviewNotes(e.target.value)} placeholder="Beta, thoughts, crux..." />
+          </div>
+
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">Preview</p>
+            <div className="mt-3 flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-sm text-muted-foreground">Your grade</p>
+                <p className="font-display text-3xl text-primary">{previewGrade || "—"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Highest sent (preview)</p>
+                <p className="font-display text-2xl">{previewSent ? previewBestLabel : "Send it to update"}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <BadgePill tone={previewSent ? "success" : "warning"}>
+                  {previewSent ? "Sent" : "Project"}
+                </BadgePill>
+                {previewStyle ? <BadgePill tone="neutral">{previewStyle}</BadgePill> : null}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              className="flex-1"
+              onClick={() => {
+                if (!user && previewSent && previewGradeSystem === "V-Scale") {
+                  const numeric = parseVScaleNumeric(previewGrade);
+                  if (numeric != null && numeric > guestBestV) {
+                    const next = numeric;
+                    setGuestBestV(next);
+                    window.localStorage.setItem("cragmate_guest_best_v1", String(next));
+                  }
+                }
+              }}
+              variant="primary"
+            >
+              {user ? "Save Climb (coming soon)" : "Update Preview"}
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (!user) {
+                  window.dispatchEvent(
+                    new CustomEvent("cragmate:open-auth", {
+                      detail: { mode: "login" as const },
+                    }),
+                  );
+                }
+                setIsClimbPreviewOpen(false);
+              }}
+            >
+              {!user ? "Sign in to log now" : "Close"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </Layout>
+  );
+}
+
+function BadgePill({
+  tone,
+  children,
+}: {
+  tone: "success" | "warning" | "neutral";
+  children: ReactNode;
+}) {
+  const cls =
+    tone === "success"
+      ? "bg-green-500/15 text-green-400 border-green-500/20"
+      : tone === "warning"
+        ? "bg-yellow-500/15 text-yellow-300 border-yellow-500/20"
+        : "bg-card/60 text-muted-foreground border-border";
+  return (
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs border ${cls}`}>
+      {children}
+    </span>
   );
 }
