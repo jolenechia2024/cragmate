@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { href: "/progress", label: "Progress", icon: Activity, requiresAuth: false },
   { href: "/grades", label: "Grade Converter", icon: Mountain },
   { href: "/gyms", label: "Gyms", icon: MapPin },
-  { href: "/partners", label: "Partners", icon: Users },
+  { href: "/partners", label: "Find a Partner", icon: Users },
   { href: "/inbox", label: "Inbox", icon: InboxIcon, requiresAuth: true },
 ];
 

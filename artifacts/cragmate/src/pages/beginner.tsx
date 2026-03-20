@@ -33,14 +33,14 @@ export default function Beginner() {
         </p>
       </div>
 
-      <Card className="mb-8 p-6 sm:p-8 border-primary/20 bg-card/60">
-        <div className="flex items-start gap-4">
+      <Card className="mb-8 p-5 sm:p-8 border-primary/20 bg-card/60">
+        <div className="flex flex-col sm:flex-row items-start gap-4">
           <div className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
             <Compass className="w-6 h-6 text-primary" />
           </div>
 
           <div className="min-w-0">
-            <h3 className="text-3xl font-display uppercase tracking-wider mb-2 leading-snug">
+            <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-wider mb-2 leading-snug">
               Your Beginner Checklist!
             </h3>
             <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
@@ -84,14 +84,14 @@ export default function Beginner() {
               </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Link href="/sessions">
-                <Button size="lg" className="gap-2">
+            <div className="mt-5 flex flex-col sm:flex-row gap-3">
+              <Link href="/sessions" className="w-full sm:w-auto">
+                <Button size="lg" className="gap-2 w-full sm:w-auto">
                   Log your first session
                 </Button>
               </Link>
-              <Link href="/gyms">
-                <Button size="lg" variant="outline" className="gap-2">
+              <Link href="/gyms" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto">
                   Explore beginner-friendly gyms
                 </Button>
               </Link>
@@ -108,26 +108,26 @@ export default function Beginner() {
           </div>
           <Accordion type="single" collapsible>
             <AccordionItem value="footwork">
-              <AccordionTrigger className="text-left text-base sm:text-xl">Quiet Feet First</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground text-base sm:text-xl leading-relaxed pb-2">
+              <AccordionTrigger className="text-left">Quiet Feet First</AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
                 Place your feet deliberately and quietly. Most beginner falls come from rushed foot placement, not weak arms.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="body-position">
-              <AccordionTrigger className="text-left text-base sm:text-xl">Use Hips, Not Just Arms</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground text-base sm:text-xl leading-relaxed pb-2">
+              <AccordionTrigger className="text-left">Use Hips, Not Just Arms</AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
                 Keep hips close to the wall, straighten arms when possible, and push from legs to reduce pump.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="resting">
-              <AccordionTrigger className="text-left text-base sm:text-xl">Rest Between Attempts</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground text-base sm:text-xl leading-relaxed pb-2">
+              <AccordionTrigger className="text-left">Rest Between Attempts</AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
                 Rest 2-3 minutes for harder tries. Quality attempts beat repeated rushed attempts.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="falling">
-              <AccordionTrigger className="text-left text-base sm:text-xl">Safe Falling Basics</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground text-base sm:text-xl leading-relaxed pb-2">
+              <AccordionTrigger className="text-left">Safe Falling Basics</AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
                 Land with bent knees, avoid reaching back with hands, and step away from the wall after landing.
               </AccordionContent>
             </AccordionItem>
@@ -142,26 +142,26 @@ export default function Beginner() {
 
           <Accordion type="single" collapsible>
             <AccordionItem value="beta">
-              <AccordionTrigger className="text-left text-base sm:text-xl">Beta</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground text-base sm:text-xl leading-relaxed pb-2">
+              <AccordionTrigger className="text-left">Beta</AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
                 Suggested sequence/method to complete a climb.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="flash">
-              <AccordionTrigger className="text-left text-base sm:text-xl">Flash</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground text-base sm:text-xl leading-relaxed pb-2">
+              <AccordionTrigger className="text-left">Flash</AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
                 Sending on your first try!
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="project">
-              <AccordionTrigger className="text-left text-base sm:text-xl">Project</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground text-base sm:text-xl leading-relaxed pb-2">
+              <AccordionTrigger className="text-left">Project</AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
                 A climb you work on over multiple attempts or sessions.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="slab-overhang">
-              <AccordionTrigger className="text-left text-base sm:text-xl">Slab / Overhang</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground text-base sm:text-xl leading-relaxed pb-2">
+              <AccordionTrigger className="text-left">Slab / Overhang</AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
                 Slab leans less than vertical (balance-heavy). Overhang leans out (core + pulling heavy).
               </AccordionContent>
             </AccordionItem>

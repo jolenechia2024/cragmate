@@ -119,7 +119,7 @@ export default function SessionDetail() {
               {formatDate(session.date)}
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button variant="outline" onClick={handleDeleteSession} disabled={deleteSessionMutation.isPending}>
               <Trash2 className="w-4 h-4 mr-2" /> Delete
             </Button>
