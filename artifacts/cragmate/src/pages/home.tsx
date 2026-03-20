@@ -214,7 +214,7 @@ export default function Home() {
 
   return (
     <Layout>
-      <div className="relative rounded-2xl overflow-hidden mb-12 bg-teal-950 border border-teal-900/30 shadow-[0_0_40px_rgba(0,212,170,0.05)]">
+      <div className="relative rounded-2xl overflow-hidden mb-8 sm:mb-12 bg-teal-950 border border-teal-900/30 shadow-[0_0_40px_rgba(0,212,170,0.05)]">
         <div className="absolute inset-0 z-0">
           <img 
             src={`${import.meta.env.BASE_URL}images/hero-texture.png`} 
@@ -224,22 +224,22 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
         </div>
         
-        <div className="relative z-10 p-8 md:p-16 lg:p-24 flex flex-col items-start max-w-3xl">
+        <div className="relative z-10 p-5 sm:p-8 md:p-16 lg:p-24 flex flex-col items-start max-w-3xl">
           <Badge className="mb-6 border border-primary text-primary bg-primary/10 shadow-[0_0_10px_rgba(0,212,170,0.2)]">BETA ACCESS</Badge>
-          <h1 className="text-6xl md:text-8xl font-display uppercase leading-[0.85] text-white mb-6">
+          <h1 className="text-4xl sm:text-6xl md:text-8xl font-display uppercase leading-[0.9] sm:leading-[0.85] text-white mb-4 sm:mb-6">
             Conquer <br/><span className="text-primary drop-shadow-[0_0_15px_rgba(0,212,170,0.4)]">The Crag</span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl font-medium">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-10 max-w-xl font-medium">
             The ultimate companion for climbers. Track your sessions, visualize your progress, find buddies, and convert grades with ease. 
           </p>
-          <div className="flex flex-wrap gap-4">
-            <Link href="/sessions">
-              <Button size="lg" className="gap-2">
+          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 sm:gap-4">
+            <Link href="/sessions" className="w-full sm:w-auto">
+              <Button size="lg" className="gap-2 w-full sm:w-auto">
                 Log Your Session <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
-            <Link href="/gyms">
-              <Button size="lg" variant="outline" className="gap-2">
+            <Link href="/gyms" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto">
                 Explore Gyms
               </Button>
             </Link>
@@ -248,25 +248,25 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-card border border-border p-8 rounded-xl hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] hover:border-primary/50 transition-all duration-300 group">
+        <div className="bg-card border border-border p-5 sm:p-8 rounded-xl hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] hover:border-primary/50 transition-all duration-300 group">
           <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
             <Mountain className="w-6 h-6 text-primary" />
           </div>
-          <h3 className="text-2xl font-display uppercase tracking-wider mb-3">Grade Converter</h3>
+          <h3 className="text-xl sm:text-2xl font-display uppercase tracking-wider mb-3">Grade Converter</h3>
           <p className="text-muted-foreground">Seamlessly translate between V-scale, Font scale, and local gym color circuits in seconds.</p>
         </div>
-        <div className="bg-card border border-border p-8 rounded-xl hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] hover:border-primary/50 transition-all duration-300 group">
+        <div className="bg-card border border-border p-5 sm:p-8 rounded-xl hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] hover:border-primary/50 transition-all duration-300 group">
           <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
             <TrendingUp className="w-6 h-6 text-primary" />
           </div>
-          <h3 className="text-2xl font-display uppercase tracking-wider mb-3">Track Progress</h3>
+          <h3 className="text-xl sm:text-2xl font-display uppercase tracking-wider mb-3">Track Progress</h3>
           <p className="text-muted-foreground">Log every send and attempt. Watch your top grade rise with clear data visualizations.</p>
         </div>
-        <div className="bg-card border border-border p-8 rounded-xl hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] hover:border-primary/50 transition-all duration-300 group">
+        <div className="bg-card border border-border p-5 sm:p-8 rounded-xl hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] hover:border-primary/50 transition-all duration-300 group">
           <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
             <Users className="w-6 h-6 text-primary" />
           </div>
-          <h3 className="text-2xl font-display uppercase tracking-wider mb-3">Find Partners</h3>
+          <h3 className="text-xl sm:text-2xl font-display uppercase tracking-wider mb-3">Find Partners</h3>
           <p className="text-muted-foreground">No belay/climbing partner? No worries. Post your planned sessions and connect with the community!</p>
         </div>
       </div>
@@ -276,7 +276,7 @@ export default function Home() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-widest text-muted-foreground">Mini Quiz</p>
-              <h2 className="font-display text-3xl sm:text-4xl uppercase tracking-wider mt-1 leading-tight">
+              <h2 className="font-display text-2xl sm:text-4xl uppercase tracking-wider mt-1 leading-tight">
                 What type of climber are you?
               </h2>
               <p className="text-muted-foreground mt-3 leading-relaxed max-w-2xl">
@@ -297,7 +297,7 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground uppercase tracking-widest">
                   Question {quizStep + 1} / {AXES.length}
                 </p>
-                <p className="font-display text-2xl mt-2">{currentAxis.question}</p>
+                <p className="font-display text-xl sm:text-2xl mt-2 leading-snug">{currentAxis.question}</p>
 
                 <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button
@@ -318,7 +318,7 @@ export default function Home() {
                         setQuizStep((s) => s + 1);
                       }
                     }}
-                    className="justify-start text-left h-auto py-3 px-4 text-sm leading-snug whitespace-normal break-words"
+                    className="justify-start text-left h-auto min-h-14 py-3 px-3 sm:px-4 text-sm leading-snug whitespace-normal break-words"
                   >
                     {currentAxis.a.label}
                   </Button>
@@ -340,7 +340,7 @@ export default function Home() {
                         setQuizStep((s) => s + 1);
                       }
                     }}
-                    className="justify-start text-left h-auto py-3 px-4 text-sm leading-snug whitespace-normal break-words"
+                    className="justify-start text-left h-auto min-h-14 py-3 px-3 sm:px-4 text-sm leading-snug whitespace-normal break-words"
                   >
                     {currentAxis.b.label}
                   </Button>
@@ -396,22 +396,22 @@ export default function Home() {
         </Card>
       </div>
 
-      <Card className="mt-8 p-6 border-primary/20 bg-card/60">
-        <div className="flex items-center justify-between gap-4">
+      <Card className="mt-8 p-5 sm:p-6 border-primary/20 bg-card/60">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
               <Compass className="w-5 h-5 text-primary" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-2xl font-display uppercase tracking-wider">First time climbing?</h3>
+              <h3 className="text-xl sm:text-2xl font-display uppercase tracking-wider">First time climbing?</h3>
               <p className="text-muted-foreground mt-2">
                 Click here for a beginner checklist + quick technique tips.
               </p>
             </div>
           </div>
 
-          <Link href="/beginner">
-            <Button className="shrink-0" size="lg">
+          <Link href="/beginner" className="w-full sm:w-auto">
+            <Button className="shrink-0 w-full sm:w-auto" size="lg">
               Click here <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </Link>

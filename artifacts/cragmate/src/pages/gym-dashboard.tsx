@@ -57,7 +57,13 @@ export default function GymDashboard() {
         outlets.find((o) => o.instagramUrl)?.instagramUrl ?? BRAND_INSTAGRAM_FALLBACK[brand],
       imageUrl: outlets.find((o) => o.imageUrl)?.imageUrl,
     }))
-    .sort((a, b) => a.brand.localeCompare(b.brand));
+    // Desktop grid: pair "taller" cards (more outlets) with other taller cards
+    // to reduce annoying whitespace under short cards.
+    .sort((a, b) => {
+      const bySize = (b.outlets?.length ?? 0) - (a.outlets?.length ?? 0);
+      if (bySize !== 0) return bySize;
+      return a.brand.localeCompare(b.brand);
+    });
 
   const toggleExpanded = (id: number) => {
     setExpandedGymIds((prev) => {
@@ -121,14 +127,14 @@ export default function GymDashboard() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
-                  <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                  <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] break-words">
                     {group.brand}
                   </h3>
                   {/* Instagram button removed; use "Check routeset" per outlet */}
                 </div>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="p-5 sm:p-6 space-y-4">
                 {group.outlets.map((gym) => {
                   const updatedAtLabel = formatUpdatedAt(gym.routesetScheduleUpdatedAt);
                   const isExpanded = expandedGymIds.has(gym.id);
@@ -140,7 +146,7 @@ export default function GymDashboard() {
                     gym.website;
 
                   return (
-                    <div key={gym.id} className="rounded-xl border border-border p-4 bg-card/30">
+                    <div key={gym.id} className="rounded-xl border border-border p-3 sm:p-4 bg-card/30">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="min-w-0">
                           <p className="font-display uppercase tracking-wider text-base sm:text-lg truncate">
@@ -180,15 +186,12 @@ export default function GymDashboard() {
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
-                        <Badge variant="default" className="bg-primary/10 border border-primary/30 text-primary">
-                          Beginner start: VB-V2
-                        </Badge>
                         <Badge variant="default" className="bg-teal-950 border border-teal-900">
                           Day pass: {formatPrice(gym.dayPassPrice) ?? "N/A"}
                         </Badge>
                         {formatPrice(gym.membershipPrice) && (
                           <Badge variant="default" className="bg-teal-950 border border-teal-900">
-                            Membership: {formatPrice(gym.membershipPrice)}
+                            10 multipass: {formatPrice(gym.membershipPrice)}
                           </Badge>
                         )}
                         {updatedAtLabel && (

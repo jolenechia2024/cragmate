@@ -200,7 +200,7 @@ export default function SessionDetail() {
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} title="Log Climb">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Grade System</Label>
               <Select {...register("gradeSystem")}>
@@ -216,7 +216,7 @@ export default function SessionDetail() {
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Style</Label>
               <Select {...register("style")}>

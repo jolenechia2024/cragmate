@@ -423,7 +423,8 @@ export default function GradeConverter() {
                   </div>
                   <span
                     className={cn(
-                      "inline-flex items-center justify-center min-w-[6.5rem] max-w-[6.5rem] min-h-[3rem] px-2 py-1.5 rounded-md font-bold tracking-wider uppercase text-xs shadow-sm shrink-0",
+                      // Mobile: allow the chip to shrink to fit narrow screens.
+                      "inline-flex items-center justify-center min-w-[5.5rem] max-w-[6.5rem] min-h-[3rem] px-2 py-1.5 rounded-md font-bold tracking-wider uppercase text-xs shadow-sm break-words",
                       theme.hue,
                       theme.text,
                     )}
@@ -436,7 +437,8 @@ export default function GradeConverter() {
                 <div className="mt-3 flex items-start justify-between gap-3">
                   <span
                     className={cn(
-                      "inline-flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm min-w-[8.5rem] max-w-[9rem] min-h-[3rem] leading-tight text-center shrink-0",
+                      // Mobile: keep chips readable but allow shrinking to avoid overflow.
+                      "inline-flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm min-w-[7rem] max-w-[8rem] min-h-[3rem] leading-tight text-center break-words",
                       exp.hue,
                       exp.text,
                     )}
