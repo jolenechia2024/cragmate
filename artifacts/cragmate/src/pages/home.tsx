@@ -96,42 +96,6 @@ export default function Home() {
   );
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(QUIZ_STORAGE_KEY);
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as {
-        quizStep?: number;
-        quiz?: QuizState;
-        resultType?: string | null;
-      };
-
-      const allowedTypes: ClimberType[] = [
-        "Technician",
-        "Explorer",
-        "Strategist",
-        "Flow Climber",
-        "Motivator",
-        "Grinder",
-        "Risk-Taker",
-        "Calm Connector",
-      ];
-      if (parsed?.quiz) setQuiz(parsed.quiz);
-
-      const step = typeof parsed?.quizStep === "number" ? parsed.quizStep : 0;
-      setQuizStep(Math.max(0, Math.min(step, AXES.length)));
-
-      if (parsed?.resultType && allowedTypes.includes(parsed.resultType as ClimberType)) {
-        setResultType(parsed.resultType as ClimberType);
-        setQuizStep(AXES.length); // show result immediately
-      } else {
-        setResultType(null);
-      }
-    } catch {
-      // ignore
-    }
-  }, [AXES.length]);
-
-  useEffect(() => {
     // Persist quiz progress (including mid-quiz) so guests don't lose it on refresh.
     const payload = {
       quizStep,
