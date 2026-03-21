@@ -147,7 +147,7 @@ export default function GymDashboard() {
           <div className="text-sm">
             <p className="font-semibold text-foreground">Beginner friendly tags</p>
             <p className="text-muted-foreground mt-1">
-              Click on the badge to see <strong className="text-foreground">opinions & insights</strong> of the gym from the climbing community.
+              Click on the tags to view <strong className="text-foreground">opinions & insights</strong> of the gym from the climbing community.
             </p>
           </div>
         </div>
@@ -239,7 +239,7 @@ export default function GymDashboard() {
                           <button
                             type="button"
                             onClick={() => toggleBeginnerNoteExpanded(gym.id)}
-                            className="inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-2.5 py-0.5 text-xs font-semibold text-primary hover:bg-primary/25 transition-colors"
+                            className="inline-flex items-center rounded-full border border-primary/50 bg-primary/20 px-2.5 py-0.5 text-xs font-semibold text-primary shadow-[0_0_10px_rgba(0,212,170,0.28)] hover:bg-primary/30 hover:shadow-[0_0_14px_rgba(0,212,170,0.38)] transition-all"
                             aria-expanded={isBeginnerNoteExpanded}
                             aria-label={isBeginnerNoteExpanded ? "Hide community insights" : "Show community insights"}
                           >
@@ -261,11 +261,6 @@ export default function GymDashboard() {
                           </Badge>
                         )}
                       </div>
-                      {gym.beginnerFriendly && (
-                        <p className="mt-2 text-[11px] text-muted-foreground">
-                          Click the <span className="text-primary font-semibold">Beginner friendly</span> tag to view community insights.
-                        </p>
-                      )}
                       {gym.beginnerFriendly && isBeginnerNoteExpanded && (
                         <div className="mt-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
                           <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-1.5">
