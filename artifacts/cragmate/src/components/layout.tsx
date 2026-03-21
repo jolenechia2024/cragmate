@@ -217,7 +217,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </p>
                     {user ? (
                       <p className="text-[11px] text-muted-foreground/90 truncate whitespace-nowrap">
-                        Streak: {streak} day{streak === 1 ? "" : "s"}
+                        Streak: {streak} week{streak === 1 ? "" : "s"}
                       </p>
                     ) : null}
                   </div>
@@ -314,7 +314,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </p>
               {user ? (
                 <p className="text-[11px] text-muted-foreground/90 truncate whitespace-nowrap mt-1">
-                  Streak: {streak} day{streak === 1 ? "" : "s"}
+                  Streak: {streak} week{streak === 1 ? "" : "s"}
                 </p>
               ) : null}
             </div>

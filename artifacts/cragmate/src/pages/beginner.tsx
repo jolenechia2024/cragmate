@@ -3,18 +3,8 @@ import { Card, Button } from "@/components/ui";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link } from "wouter";
 import { ArrowLeft, BookOpen, Compass, Shield } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getStreak } from "@/lib/streak";
 
 export default function Beginner() {
-  const [streak, setStreak] = useState(() => getStreak().currentStreak);
-
-  useEffect(() => {
-    const onStreak = () => setStreak(getStreak().currentStreak);
-    window.addEventListener("cragmate:streak-updated", onStreak as EventListener);
-    return () => window.removeEventListener("cragmate:streak-updated", onStreak as EventListener);
-  }, []);
-
   return (
     <Layout>
       <div className="mb-6">
@@ -43,28 +33,6 @@ export default function Beginner() {
             <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-wider mb-2 leading-snug">
               Your Beginner Checklist!
             </h3>
-            <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-              First session checklist: rental shoes, short warm-up, choose VB-V2 climbs, rest between attempts, and focus on foot placement over power.
-            </p>
-
-            <div className="mt-6 rounded-xl border border-border bg-background/40 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Climbing streak</p>
-                <p className="font-display text-2xl sm:text-3xl mt-1">
-                  {streak} day{streak === 1 ? "" : "s"}
-                </p>
-                <p className="text-muted-foreground text-sm mt-1">
-                  {streak > 0 ? "Log a session today to keep it going." : "Log your first session to start your streak."}
-                </p>
-              </div>
-
-              <Link href="/sessions">
-                <Button size="lg" className="w-full sm:w-auto">
-                  {streak > 0 ? "Keep streak" : "Log session"}
-                </Button>
-              </Link>
-            </div>
-
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               <div className="rounded-lg border border-border p-4 bg-background/40">
                 <div className="font-semibold text-foreground text-sm sm:text-base">1) Gear</div>
@@ -96,12 +64,6 @@ export default function Beginner() {
                 </Button>
               </Link>
             </div>
-            <p className="text-muted-foreground text-sm mt-3 max-w-2xl">
-              Opens the gym list with <strong className="text-foreground">Beginner friendly!</strong> turned on.
-              Tagged outlets show <strong className="text-foreground">Community insights</strong> under the address with
-              notes from climber community recommendations. Use each outlet's{" "}
-              <strong className="text-foreground">Website</strong> button to verify current pricing and facilities.
-            </p>
           </div>
         </div>
       </Card>

@@ -10,7 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Calendar, Activity, Sparkles, Lightbulb, Check } from "lucide-react";
-import { bumpClimbingStreak } from "@/lib/streak";
+import { bumpClimbingStreak, getStreak } from "@/lib/streak";
 
 const sessionSchema = z.object({
   gymId: z.coerce.number().min(1, "Please select a gym"),
@@ -36,6 +36,7 @@ export default function SessionLogger() {
   const [previewAttempts, setPreviewAttempts] = useState<number>(1);
   const [previewSent, setPreviewSent] = useState<boolean>(true);
   const [previewNotes, setPreviewNotes] = useState<string>("Quiet feet, smooth pacing.");
+  const [streak, setStreak] = useState(() => getStreak().currentStreak);
 
   const [guestBestV, setGuestBestV] = useState<number>(0);
 
@@ -62,9 +63,7 @@ export default function SessionLogger() {
   }, [user]);
 
   useEffect(() => {
-    const onStreak = () => {
-      // no-op; keeps pattern consistent if later you want more preview wiring
-    };
+    const onStreak = () => setStreak(getStreak().currentStreak);
     window.addEventListener("cragmate:streak-updated", onStreak as EventListener);
     return () => window.removeEventListener("cragmate:streak-updated", onStreak as EventListener);
   }, []);
@@ -176,6 +175,20 @@ export default function SessionLogger() {
             <p className="font-semibold text-foreground">Beginner session guide</p>
             <p className="text-sm text-muted-foreground mt-1">
               Try VB-V2 first, keep rests long, and track confidence to spot patterns over time.
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="mb-6 p-4 border-primary/20 bg-card/60">
+        <div>
+          <div>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">Weekly streak</p>
+            <p className="font-display text-2xl sm:text-3xl mt-1">
+              {streak} week{streak === 1 ? "" : "s"}
+            </p>
+            <p className="text-muted-foreground text-sm mt-1">
+              {streak > 0 ? "Log at least one session this week to keep it going." : "Log your first session this week to start your streak."}
             </p>
           </div>
         </div>

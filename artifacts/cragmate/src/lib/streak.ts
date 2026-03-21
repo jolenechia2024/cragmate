@@ -1,4 +1,4 @@
-const STREAK_KEY = "cragmate_climbing_streak_v1";
+const STREAK_KEY = "cragmate_climbing_streak_v2";
 
 type StreakState = {
   currentStreak: number;
@@ -37,6 +37,15 @@ function addDays(dayKey: string, deltaDays: number): string {
   return getLocalDayKey(dt);
 }
 
+function getWeekStartDayKey(dayKey: string): string {
+  const [y, m, d] = dayKey.split("-").map((n) => Number(n));
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+  // Monday-based week start: Mon=0 ... Sun=6
+  const mondayOffset = (dt.getDay() + 6) % 7;
+  dt.setDate(dt.getDate() - mondayOffset);
+  return getLocalDayKey(dt);
+}
+
 export function bumpClimbingStreak(): StreakState {
   if (typeof window === "undefined") {
     return { currentStreak: 0, lastClimbedDay: "" };
@@ -45,15 +54,20 @@ export function bumpClimbingStreak(): StreakState {
   const today = getLocalDayKey(new Date());
   const prev = getStreak();
 
-  // Same day: don't increment
-  if (prev.lastClimbedDay === today) {
+  const prevWeekStart = prev.lastClimbedDay
+    ? getWeekStartDayKey(prev.lastClimbedDay)
+    : "";
+  const thisWeekStart = getWeekStartDayKey(today);
+
+  // Already logged this week: don't increment.
+  if (prevWeekStart === thisWeekStart) {
     return prev;
   }
 
-  // If user climbed yesterday: increment, else reset to 1
-  const yesterday = addDays(prev.lastClimbedDay || today, -1);
+  // If user logged in the immediately previous week: increment, else reset to 1.
+  const previousWeekStart = addDays(thisWeekStart, -7);
   const nextStreak =
-    prev.lastClimbedDay && prev.lastClimbedDay === yesterday
+    prevWeekStart && prevWeekStart === previousWeekStart
       ? prev.currentStreak + 1
       : 1;
 

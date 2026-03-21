@@ -1,5 +1,5 @@
 export const CLIMB_BOOSTS = [
-  "POV: you said \"last try\" 7 tries ago. Keep cooking.",
+  "You said \"last try\" 7 tries ago. Keep cooking.",
   "Touch grass? No. Touch crimps. Respectfully.",
   "Your beta is loading... please wait... still better than campus board chaos.",
   "If your feet cut, act like it was dynamic style points.",

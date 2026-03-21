@@ -27,12 +27,7 @@ function shuffleAndPickN(total: number, n: number): number[] {
   }
   return arr.slice(0, n);
 }
-const FOLLOW_UP_FUNNY_BOOSTS = [
-  "Uh..what are you waiting for? Go hit the wall now.",
-  "Clock in. Your project is not sending itself.",
-  "Main character moment: pull on and cause chaos.",
-  "Enough pep talk. Time for chalk talk.",
-] as const;
+const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
 
   type ClimberType = import("@/lib/quiz-bank").ClimberType;
 
@@ -643,11 +638,7 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
                         "Stay calm, trust your feet, and have fun.";
                       setActiveBoost(randomBoost);
                     } else {
-                      const followUpBoost =
-                        FOLLOW_UP_FUNNY_BOOSTS[
-                          (surpriseBoostTapCount - 1) % FOLLOW_UP_FUNNY_BOOSTS.length
-                        ] ?? "Go hit the wall now.";
-                      setActiveBoost(followUpBoost);
+                      setActiveBoost(FOLLOW_UP_BOOST);
                     }
                     setSurpriseBoostTapCount((n) => n + 1);
                     setIsSurpriseHintOpen(true);
