@@ -147,7 +147,7 @@ export default function GymDashboard() {
           <div className="text-sm">
             <p className="font-semibold text-foreground">Beginner friendly tags</p>
             <p className="text-muted-foreground mt-1">
-              Outlets with the badge include <strong className="text-foreground">Community insights</strong> based on recommendations from the climbing community.
+              Click on the badge to see <strong className="text-foreground">opinions & insights</strong> of the gym from the climbing community.
             </p>
           </div>
         </div>
@@ -234,37 +234,18 @@ export default function GymDashboard() {
                         </div>
                       </div>
 
-                      {gym.beginnerFriendly && (
-                        <div className="mt-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
-                          <div className="mb-1.5 flex items-center justify-between gap-3">
-                            <p className="text-[10px] uppercase tracking-widest text-primary font-semibold">
-                              Community insights
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => toggleBeginnerNoteExpanded(gym.id)}
-                              className="text-xs text-primary underline underline-offset-4 hover:text-primary/80 shrink-0"
-                            >
-                              {isBeginnerNoteExpanded ? "Show less" : "Show more"}
-                            </button>
-                          </div>
-                          <p
-                            className={`text-xs text-muted-foreground leading-relaxed whitespace-pre-line break-words ${
-                              isBeginnerNoteExpanded ? "" : "line-clamp-3"
-                            }`}
-                          >
-                            {gym.beginnerNotes ??
-                              "Tagged from public listing—open Website above to confirm current offers and facilities."}
-                          </p>
-                        </div>
-                      )}
-
                       <div className="mt-4 flex flex-wrap gap-2">
                         {gym.beginnerFriendly && (
-                          <Badge variant="default" className="bg-primary/20 text-primary border border-primary/40">
+                          <button
+                            type="button"
+                            onClick={() => toggleBeginnerNoteExpanded(gym.id)}
+                            className="inline-flex items-center rounded-full border border-primary/40 bg-primary/20 px-2.5 py-0.5 text-xs font-semibold text-primary hover:bg-primary/25 transition-colors"
+                            aria-expanded={isBeginnerNoteExpanded}
+                            aria-label={isBeginnerNoteExpanded ? "Hide community insights" : "Show community insights"}
+                          >
                             <GraduationCap className="w-3.5 h-3.5 mr-1" />
                             Beginner friendly
-                          </Badge>
+                          </button>
                         )}
                         <Badge variant="default" className="bg-teal-950 border border-teal-900">
                           Day pass: {formatPrice(gym.dayPassPrice) ?? "N/A"}
@@ -280,6 +261,22 @@ export default function GymDashboard() {
                           </Badge>
                         )}
                       </div>
+                      {gym.beginnerFriendly && (
+                        <p className="mt-2 text-[11px] text-muted-foreground">
+                          Click the <span className="text-primary font-semibold">Beginner friendly</span> tag to view community insights.
+                        </p>
+                      )}
+                      {gym.beginnerFriendly && isBeginnerNoteExpanded && (
+                        <div className="mt-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
+                          <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-1.5">
+                            Community insights
+                          </p>
+                          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line break-words">
+                            {gym.beginnerNotes ??
+                              "Tagged from public listing—open Website above to confirm current offers and facilities."}
+                          </p>
+                        </div>
+                      )}
 
                       {(gym.routesetSchedule?.extractedText || gym.routesetScheduleUpdatedAt) && (
                         <div className="mt-4 rounded-lg border border-border bg-card/40 p-3">

@@ -1,4 +1,5 @@
 import { db, gymsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 /**
  * One-line beginner notes copied from operator/public listings.
@@ -390,14 +391,32 @@ const gyms = [
 
 async function main() {
   console.log("Seeding gyms with real Singapore data...");
-  await db.delete(gymsTable);
   const rows = gyms.map((g) => ({
     ...g,
     beginnerFriendly: Object.prototype.hasOwnProperty.call(BEGINNER_NOTES, g.name),
     beginnerNotes: BEGINNER_NOTES[g.name] ?? null,
   }));
-  await db.insert(gymsTable).values(rows);
-  console.log(`Seeded ${gyms.length} gyms.`);
+
+  let updatedCount = 0;
+  let insertedCount = 0;
+
+  for (const row of rows) {
+    const existing = await db
+      .select({ id: gymsTable.id })
+      .from(gymsTable)
+      .where(eq(gymsTable.name, row.name))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db.update(gymsTable).set(row).where(eq(gymsTable.id, existing[0]!.id));
+      updatedCount += 1;
+    } else {
+      await db.insert(gymsTable).values(row);
+      insertedCount += 1;
+    }
+  }
+
+  console.log(`Seeded gyms complete. Updated ${updatedCount}, inserted ${insertedCount}.`);
   process.exit(0);
 }
 
