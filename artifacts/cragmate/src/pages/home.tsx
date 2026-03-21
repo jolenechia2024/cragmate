@@ -1,13 +1,32 @@
 import { Layout } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
 import { CLIMB_BOOSTS } from "@/lib/climb-boosts";
+import { QUESTION_BANK } from "@/lib/quiz-bank";
 import { Link } from "wouter";
 import { ArrowRight, Compass, Mountain, TrendingUp, Users } from "lucide-react";
-import { useEffect, useMemo, useState, useRef, type ReactNode, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { animate, motion, useMotionValue } from "framer-motion";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  type ReactNode,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { motion, useMotionValue } from "framer-motion";
 
 export default function Home() {
-const QUIZ_STORAGE_KEY = "cragmate_climber_quiz_v2";
+const QUIZ_STORAGE_KEY = "cragmate_climber_quiz_v4";
+const QUIZ_LENGTH = 10;
+
+function shuffleAndPickN(total: number, n: number): number[] {
+  const arr = Array.from({ length: total }, (_, i) => i);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+  }
+  return arr.slice(0, n);
+}
 const FOLLOW_UP_FUNNY_BOOSTS = [
   "Uh..what are you waiting for? Go hit the wall now.",
   "Clock in. Your project is not sending itself.",
@@ -15,106 +34,112 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
   "Enough pep talk. Time for chalk talk.",
 ] as const;
 
-  type ClimberType =
-    | "Technician"
-    | "Explorer"
-    | "Strategist"
-    | "Flow Climber"
-    | "Motivator"
-    | "Grinder"
-    | "Risk-Taker"
-    | "Calm Connector";
+  type ClimberType = import("@/lib/quiz-bank").ClimberType;
 
-  type QuizState = {
-    q1?: ClimberType;
-    q2?: ClimberType;
-    q3?: ClimberType;
-    q4?: ClimberType;
-    q5?: ClimberType;
-    q6?: ClimberType;
-  };
+  type QuizState = Record<string, ClimberType>;
 
+  const QUIZ_QUESTION_BANK = QUESTION_BANK;
+
+  const [selectedQuestionIndices, setSelectedQuestionIndices] = useState<number[]>(() => {
+    try {
+      const raw = window.localStorage.getItem(QUIZ_STORAGE_KEY);
+      if (!raw) return shuffleAndPickN(QUIZ_QUESTION_BANK.length, QUIZ_LENGTH);
+      const parsed = JSON.parse(raw) as { selectedQuestionIndices?: number[] };
+      const idx = parsed.selectedQuestionIndices;
+      if (Array.isArray(idx) && idx.length === QUIZ_LENGTH && idx.every((n) => typeof n === "number" && n >= 0 && n < QUIZ_QUESTION_BANK.length)) {
+        return idx;
+      }
+    } catch {
+      // ignore
+    }
+    return shuffleAndPickN(QUIZ_QUESTION_BANK.length, QUIZ_LENGTH);
+  });
   const AXES = useMemo(
-    () => [
-      {
-        key: "q1" as const,
-        question: "You just walked into the gym. First move?",
-        a: { value: "Technician" as const, label: "Quiet warm-up laps and tidy footwork" },
-        b: { value: "Explorer" as const, label: "Tour the wall and try random cool problems" },
-      },
-      {
-        key: "q2" as const,
-        question: "Your project keeps spitting you off. You...",
-        a: { value: "Strategist" as const, label: "Film beta, split it into chunks, make a plan" },
-        b: { value: "Flow Climber" as const, label: "Shake out, breathe, and chase a cleaner rhythm" },
-      },
-      {
-        key: "q3" as const,
-        question: "Playlist and vibes check?",
-        a: { value: "Motivator" as const, label: "Hype mode. Energy up, attempts up." },
-        b: { value: "Calm Connector" as const, label: "Chill mode. Smooth breathing and flow." },
-      },
-      {
-        key: "q4" as const,
-        question: "Crux move above the last good hold?",
-        a: { value: "Risk-Taker" as const, label: "Full commit. If I peel, I peel." },
-        b: { value: "Grinder" as const, label: "Repeat setup until it feels automatic." },
-      },
-      {
-        key: "q5" as const,
-        question: "Best climbing day feels like...",
-        a: { value: "Explorer" as const, label: "Tried 20 weird boulders and found new styles" },
-        b: { value: "Strategist" as const, label: "Hit today’s target and can prove progress" },
-      },
-      {
-        key: "q6" as const,
-        question: "What do you write in notes after a send?",
-        a: { value: "Technician" as const, label: "Heel timing, hip angle, exact foot swap" },
-        b: { value: "Flow Climber" as const, label: "Felt snappy, calm, and in sync today" },
-      },
-    ],
-    [],
+    () =>
+      selectedQuestionIndices.map((idx, i) => {
+        const q = QUIZ_QUESTION_BANK[idx];
+        if (!q) return { key: `q${i}` as const, question: "", a: { value: "Technician" as ClimberType, label: "" }, b: { value: "Technician" as ClimberType, label: "" } };
+        return {
+          key: `q${i}` as const,
+          question: q.question,
+          a: { value: q.a, label: q.aL },
+          b: { value: q.b, label: q.bL },
+        };
+      }),
+    [selectedQuestionIndices],
   );
 
-  const [quizStep, setQuizStep] = useState(0);
-  const [quiz, setQuiz] = useState<QuizState>({});
-  const [resultType, setResultType] = useState<ClimberType | null>(null);
+  const [quizStep, setQuizStep] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(QUIZ_STORAGE_KEY);
+      if (!raw) return 0;
+      const p = JSON.parse(raw) as { quizStep?: number };
+      return typeof p.quizStep === "number" ? p.quizStep : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const [quiz, setQuiz] = useState<QuizState>(() => {
+    try {
+      const raw = window.localStorage.getItem(QUIZ_STORAGE_KEY);
+      if (!raw) return {};
+      const p = JSON.parse(raw) as { quiz?: QuizState };
+      return p.quiz && typeof p.quiz === "object" ? p.quiz : {};
+    } catch {
+      return {};
+    }
+  });
+  const [resultType, setResultType] = useState<ClimberType | null>(() => {
+    try {
+      const raw = window.localStorage.getItem(QUIZ_STORAGE_KEY);
+      if (!raw) return null;
+      const p = JSON.parse(raw) as { resultType?: string };
+      const valid: ClimberType[] = ["Technician", "Explorer", "Strategist", "Flow Climber", "Motivator", "Grinder", "Risk-Taker", "Calm Connector"];
+      return valid.includes(p.resultType as ClimberType) ? (p.resultType as ClimberType) : null;
+    } catch {
+      return null;
+    }
+  });
   const [activeFeatureIdx, setActiveFeatureIdx] = useState(0);
 
   const FEATURE_ITEMS = useMemo(
-    () => [
-      {
-        title: "Track Progress",
-        desc: "Log every attempt and watch your climbing trend level up over time.",
-        Icon: TrendingUp,
-      },
-      {
-        title: "Grade Converter",
-        desc: "Translate grades across gyms quickly so sessions feel less confusing.",
-        Icon: Mountain,
-      },
-      {
-        title: "Find Partners",
-        desc: "Post your session plans and connect with climbers at similar levels.",
-        Icon: Users,
-      },
-    ],
+    () =>
+      [
+        {
+          title: "Track Progress",
+          desc: "Log every attempt and watch your climbing trend level up over time.",
+          Icon: TrendingUp,
+          href: "/sessions",
+        },
+        {
+          title: "Grade Converter",
+          desc: "Translate grades across gyms quickly so sessions feel less confusing.",
+          Icon: Mountain,
+          href: "/grades",
+        },
+        {
+          title: "Find Partners",
+          desc: "Post your session plans and connect with climbers at similar levels.",
+          Icon: Users,
+          href: "/partners",
+        },
+      ] as const,
     [],
   );
 
   useEffect(() => {
-    // Persist quiz progress (including mid-quiz) so guests don't lose it on refresh.
     const payload = {
       quizStep,
       quiz,
       resultType,
+      selectedQuestionIndices,
     };
     try {
       window.localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(payload));
     } catch {
-      // ignore (private browsing, storage full, etc.)
+      // ignore
     }
-  }, [quizStep, quiz, resultType]);
+  }, [quizStep, quiz, resultType, selectedQuestionIndices]);
 
   // Boulder rotation is now drag-controlled (no auto-rotation).
 
@@ -126,8 +151,6 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
   const dragMovedForClickRef = useRef(false);
   const [isBoulderDragging, setIsBoulderDragging] = useState(false);
   const isBoulderDraggingRef = useRef(false);
-  const boulderSnapControlsRef = useRef<ReturnType<typeof animate> | null>(null);
-
   const prevQuizResultTypeRef = useRef<ClimberType | null>(null);
   const [quizSurpriseNonce, setQuizSurpriseNonce] = useState(0);
   const [isFeatureBoulderInView, setIsFeatureBoulderInView] = useState(false);
@@ -165,13 +188,14 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
       "Calm Connector",
     ];
     const i = order.indexOf(type);
+    // Keep surprise holds on the right / lower boulder so they don’t sit on the ascending pocket route.
     const posCandidates = [
-      { left: "30%", top: "40%", rotate: "-14deg" },
-      { left: "70%", top: "44%", rotate: "12deg" },
-      { left: "52%", top: "26%", rotate: "-6deg" },
-      { left: "24%", top: "62%", rotate: "14deg" },
-      { left: "78%", top: "30%", rotate: "-10deg" },
-      { left: "42%", top: "74%", rotate: "8deg" },
+      { left: "72%", top: "58%", rotate: "-12deg" },
+      { left: "74%", top: "44%", rotate: "10deg" },
+      { left: "68%", top: "68%", rotate: "-8deg" },
+      { left: "76%", top: "50%", rotate: "14deg" },
+      { left: "70%", top: "32%", rotate: "-10deg" },
+      { left: "64%", top: "76%", rotate: "9deg" },
     ];
     const shapeCandidates = [
       "72% 28% 40% 60% / 58% 42% 70% 30%",
@@ -179,9 +203,9 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
       "48% 52% 58% 42% / 62% 38% 45% 55%",
     ];
     const sizeCandidates = [
-      { w: 70, h: 48 },
-      { w: 64, h: 44 },
-      { w: 78, h: 52 },
+      { w: 56, h: 32 },
+      { w: 52, h: 30 },
+      { w: 60, h: 34 },
     ];
 
     const style = getQuizSurpriseStyle(type);
@@ -253,87 +277,61 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
     setSurpriseTapPulseNonce((n) => n + 1);
   }
 
-  function snapBoulderToFeature(nextIdx: number) {
-    // Snap to the old “120deg per feature” dial positions, but pick the closest
-    // angle to avoid long spins.
-    const current = boulderRotation.get();
-    const targetBase = nextIdx * 120;
-    const candidates = [targetBase, targetBase + 360, targetBase - 360];
-    const target = candidates.sort((a, b) => Math.abs(a - current) - Math.abs(b - current))[0] ?? targetBase;
-
-    try {
-      boulderSnapControlsRef.current?.stop?.();
-    } catch {
-      // ignore
-    }
-
-    boulderSnapControlsRef.current = animate(boulderRotation, target, {
-      type: "tween",
-      duration: 0.4,
-      ease: "easeOut",
-    });
-  }
-
   function handleBoulderPointerDown(e: ReactPointerEvent<HTMLElement>) {
     startPointerXRef.current = e.clientX;
     startPointerYRef.current = e.clientY;
     dragMovedForClickRef.current = false;
     lastPointerXRef.current = e.clientX;
     lastPointerYRef.current = e.clientY;
-    // If a snap animation is currently running (from a tap),
-    // stop it so the drag immediately takes over.
-    try {
-      boulderSnapControlsRef.current?.stop?.();
-    } catch {
-      // ignore
-    }
     setIsBoulderDragging(false);
     isBoulderDraggingRef.current = false;
-  }
 
-  function handleBoulderPointerMove(e: ReactPointerEvent<HTMLElement>) {
-    const startX = startPointerXRef.current;
-    const startY = startPointerYRef.current;
-    const lastX = lastPointerXRef.current;
-    const lastY = lastPointerYRef.current;
-    if (startX === null || startY === null || lastX === null || lastY === null) return;
+    const dragThreshold = e.pointerType === "touch" ? 12 : 10;
 
-    const dxTotal = e.clientX - startX;
-    const dyTotal = e.clientY - startY;
-    const dist = Math.hypot(dxTotal, dyTotal);
+    const onMove = (ev: PointerEvent) => {
+      const startX = startPointerXRef.current;
+      const startY = startPointerYRef.current;
+      const lastX = lastPointerXRef.current;
+      const lastY = lastPointerYRef.current;
+      if (startX === null || startY === null || lastX === null || lastY === null) return;
 
-    // Only start rotating after a deliberate drag (fixes “hold not clickable”).
-    const dragThreshold = e.pointerType === "touch" ? 18 : 10;
-    const shouldDrag = dist > dragThreshold;
+      const dxTotal = ev.clientX - startX;
+      const dyTotal = ev.clientY - startY;
+      const dist = Math.hypot(dxTotal, dyTotal);
+      if (dist <= dragThreshold) return;
 
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastPointerXRef.current = e.clientX;
-    lastPointerYRef.current = e.clientY;
+      const dx = ev.clientX - lastX;
+      const dy = ev.clientY - lastY;
+      lastPointerXRef.current = ev.clientX;
+      lastPointerYRef.current = ev.clientY;
 
-    if (!shouldDrag) return;
+      if (!dragMovedForClickRef.current) dragMovedForClickRef.current = true;
+      if (!isBoulderDraggingRef.current) {
+        isBoulderDraggingRef.current = true;
+        setIsBoulderDragging(true);
+      }
+      boulderRotation.set(boulderRotation.get() + dx * 0.52 - dy * 0.06);
+    };
 
-    if (!dragMovedForClickRef.current) dragMovedForClickRef.current = true;
-    if (!isBoulderDraggingRef.current) {
-      isBoulderDraggingRef.current = true;
-      setIsBoulderDragging(true);
-    }
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      lastPointerXRef.current = null;
+      lastPointerYRef.current = null;
+      startPointerXRef.current = null;
+      startPointerYRef.current = null;
+      setIsBoulderDragging(false);
+      isBoulderDraggingRef.current = false;
+    };
 
-    // Rotate freely (allow values to go beyond 360deg).
-    boulderRotation.set(boulderRotation.get() + dx * 0.45 - dy * 0.08);
-  }
-
-  function handleBoulderPointerUp() {
-    lastPointerXRef.current = null;
-    lastPointerYRef.current = null;
-    startPointerXRef.current = null;
-    startPointerYRef.current = null;
-    setIsBoulderDragging(false);
-    isBoulderDraggingRef.current = false;
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+    window.addEventListener("pointercancel", onUp, { once: true });
   }
 
   function computeType(nextQuiz: QuizState): ClimberType | "" {
-    const values = [nextQuiz.q1, nextQuiz.q2, nextQuiz.q3, nextQuiz.q4, nextQuiz.q5, nextQuiz.q6];
+    const values = AXES.map((ax) => nextQuiz[ax.key]);
     if (values.some((v) => !v)) return "";
 
     const score: Record<ClimberType, number> = {
@@ -370,54 +368,31 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
     return best ?? "";
   }
 
-  const nextAdvice = useMemo(() => {
+  /** Blurb only — headline is shown once as “The {resultType}” to avoid repeating “You are…”. */
+  const resultBlurb = useMemo(() => {
     if (!resultType) return null;
     if (resultType === "Technician") {
-      return {
-        title: "You are The Technician",
-        body: "You are all about details. Tiny foot placements, clean body positions, and smart repeats are your superpower.",
-      };
+      return "All about details: tidy foot placements, clean body positions, and smart repeats.";
     }
     if (resultType === "Explorer") {
-      return {
-        title: "You are The Explorer",
-        body: "You get better by trying everything. Weird beta, new styles, random wall sections - that is your happy place.",
-      };
+      return "Progress comes from variety — weird beta, new styles, and exploring different wall sections.";
     }
     if (resultType === "Strategist") {
-      return {
-        title: "You are The Strategist",
-        body: "You love a game plan. Give yourself one target, track attempts, and you usually crack it before the session ends.",
-      };
+      return "Plans beat panic: one clear target, tracked attempts, and steady progress through the session.";
     }
     if (resultType === "Flow Climber") {
-      return {
-        title: "You are The Flow Climber",
-        body: "You climb best when movement feels smooth, not forced. Rhythm, breathing, and timing matter more than brute effort.",
-      };
+      return "Best when movement feels smooth: rhythm, breathing, and timing over brute force.";
     }
     if (resultType === "Motivator") {
-      return {
-        title: "You are The Motivator",
-        body: "You run on energy. A bit of hype, friends cheering, and you suddenly stick moves that felt impossible 10 minutes ago.",
-      };
+      return "Energy is fuel: a bit of hype and friendly noise can unlock moves that felt stuck.";
     }
     if (resultType === "Grinder") {
-      return {
-        title: "You are The Grinder",
-        body: "You trust the process. Same climb, cleaner tries, small upgrades each burn - and then it clicks.",
-      };
+      return "Process-first: same climb, cleaner tries, small upgrades each burn until it clicks.";
     }
     if (resultType === "Risk-Taker") {
-      return {
-        title: "You are The Risk-Taker",
-        body: "You are bold. You commit hard, go for big moves, and learn fastest when you stop hesitating.",
-      };
+      return "Commits hard: big moves and less hesitation — learning curve includes some dramatic whips.";
     }
-    return {
-      title: "You are The Calm Connector",
-      body: "You are steady and composed. You read routes well, stay relaxed under pressure, and make climbing look easy.",
-    };
+    return "Steady under pressure: reads routes calmly, stays relaxed, and keeps composure on the wall.";
   }, [resultType]);
 
   const currentAxis = AXES[quizStep] ?? null;
@@ -462,38 +437,29 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
         <div className="text-center mb-6">
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Feature Boulder</p>
           <h2 className="font-display text-2xl sm:text-3xl uppercase tracking-wider mt-2">
-            Drag to rotate or tap a hold
+            Tap a hold to view feature
           </h2>
         </div>
 
         <div className="overflow-visible grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 sm:gap-8 items-center">
           <div className="flex flex-col items-center overflow-visible py-4 sm:py-6">
             <motion.div
-              whileTap={{ cursor: "grabbing" }}
-              onPointerDown={handleBoulderPointerDown}
-              onPointerMove={handleBoulderPointerMove}
-              onPointerUp={handleBoulderPointerUp}
-              onPointerCancel={handleBoulderPointerUp}
+              onPointerDownCapture={handleBoulderPointerDown}
               style={{ rotate: boulderRotation }}
               className={`relative w-[20rem] h-[16rem] sm:w-[24rem] sm:h-[18rem] md:w-[30rem] md:h-[22rem] touch-none select-none ${isBoulderDragging ? "cursor-grabbing" : "cursor-grab"}`}
             >
               {/* Main irregular boulder body (Fountainebleau-ish silhouette) */}
-              {/* Outer glowing outline (clipped to boulder silhouette) */}
+              {/* Outer glow — subtle breathing pulse, with larger bleed so it won't clip at edges */}
               <motion.div
-                className="absolute -inset-2 sm:-inset-4 bg-primary/25 blur-3xl opacity-70 pointer-events-none"
+                aria-hidden="true"
+                className="absolute -inset-2 sm:-inset-1 bg-primary/55 blur-2xl pointer-events-none will-change-transform"
                 style={{
                   clipPath:
                     "polygon(5% 24%, 16% 8%, 35% 10%, 49% 2%, 70% 8%, 86% 22%, 96% 44%, 88% 60%, 97% 76%, 80% 93%, 60% 86%, 43% 97%, 24% 87%, 8% 67%, 3% 43%)",
                 }}
-                animate={{
-                  opacity: [0.45, 0.85, 0.55, 0.85, 0.45],
-                  scale: [1, 1.03, 1.01, 1.04, 1],
-                }}
-                transition={{
-                  duration: 3.2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
+                initial={{ opacity: 0.5, scale: 1 }}
+                animate={{ opacity: [0.48, 0.72, 0.54], scale: [0.99, 1.02, 1] }}
+                transition={{ duration: 5.8, repeat: Infinity, ease: "easeInOut" }}
               />
               <div
                 className="absolute inset-0 bg-gradient-to-br from-teal-300/30 via-teal-900/55 to-stone-950 shadow-[0_0_45px_rgba(0,212,170,0.28)]"
@@ -539,29 +505,65 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
                 }}
               />
 
-              {/* Hold protrusions (real wall-style grips) */}
+              {/* Non-tappable pockets along zigzag — varied sizes */}
+              {[
+                { left: "38%", top: "68%", w: "34px", h: "18px", r: "88% 12% 55% 45% / 40% 60% 30% 70%", rot: "-14deg", bg: "bg-black/14" },
+                { left: "42%", top: "60%", w: "22px", h: "12px", r: "90% 10% 50% 50% / 38% 62% 28% 72%", rot: "11deg", bg: "bg-primary/10" },
+                { left: "56%", top: "42%", w: "30px", h: "20px", r: "82% 18% 58% 42% / 42% 58% 32% 68%", rot: "-9deg", bg: "bg-black/14" },
+                { left: "62%", top: "34%", w: "20px", h: "11px", r: "92% 8% 48% 52% / 45% 55% 25% 75%", rot: "8deg", bg: "bg-primary/10" },
+              ].map((d, i) => (
+                <span
+                  key={`route-pocket-${i}`}
+                  aria-hidden="true"
+                  className={`absolute z-[5] -translate-x-1/2 -translate-y-1/2 overflow-hidden pointer-events-none ${d.bg} border border-border/30 opacity-80`}
+                  style={{
+                    left: d.left,
+                    top: d.top,
+                    width: d.w,
+                    height: d.h,
+                    borderRadius: d.r,
+                    transform: `rotate(${d.rot}) translate(-50%, -50%)`,
+                    boxShadow:
+                      "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 8px 14px rgba(0,0,0,0.18)",
+                  }}
+                >
+                  <span
+                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-95 pointer-events-none"
+                    style={{
+                      width: "72%",
+                      height: "72%",
+                      borderRadius: "9999px",
+                      background:
+                        "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 20%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0.38) 78%, rgba(0,0,0,0.48) 100%)",
+                      boxShadow:
+                        "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -12px 22px rgba(0,0,0,0.20), inset 0 10px 16px rgba(0,212,170,0.07)",
+                    }}
+                  />
+                </span>
+              ))}
+
+              {/* Tappable pockets — zigzag, varied sizes */}
               {FEATURE_ITEMS.map((f, idx) => {
                 const isActive = idx === activeFeatureIdx;
-                // fixed positions so holds never overlap
                 const pos =
                   idx === 0
-                    ? { left: "20%", top: "32%", rotate: "-16deg" }
+                    ? { left: "32%", top: "78%", rotate: "-11deg" }
                     : idx === 1
-                      ? { left: "82%", top: "22%", rotate: "14deg" }
-                      : { left: "48%", top: "78%", rotate: "-8deg" };
+                      ? { left: "48%", top: "52%", rotate: "9deg" }
+                      : { left: "68%", top: "26%", rotate: "-7deg" };
+                const pocketShell =
+                  idx === 0
+                    ? { w: 56, h: 32, r: "90% 10% 55% 45% / 35% 65% 28% 72%", icon: "w-5 h-5" as const }
+                    : idx === 1
+                      ? { w: 72, h: 40, r: "88% 12% 60% 40% / 45% 55% 25% 75%", icon: "w-6 h-6" as const }
+                      : { w: 48, h: 28, r: "82% 18% 55% 45% / 40% 60% 35% 65%", icon: "w-4 h-4" as const };
                 const ActiveIcon = f.Icon;
 
                 return (
                   <button
                     key={f.title}
                     type="button"
-                    onPointerDown={(e) => {
-                      // Start the boulder rotation if the user drags from a hold.
-                      e.stopPropagation();
-                      handleBoulderPointerDown(e);
-                    }}
                     onClick={(e: ReactMouseEvent<HTMLButtonElement>) => {
-                      // If the user dragged to rotate, don't also switch the feature.
                       if (dragMovedForClickRef.current) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -569,99 +571,59 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
                         return;
                       }
                       setActiveFeatureIdx(idx);
-                      snapBoulderToFeature(idx);
                     }}
                     aria-label={f.title}
                     className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 ${isBoulderDragging ? "pointer-events-none" : ""}`}
                     style={{ left: pos.left, top: pos.top, transform: `translate(-50%, -50%) rotate(${pos.rotate})` }}
                   >
                     <span
-                      className={`relative block border transition-all overflow-hidden ${
+                      className={`relative block overflow-hidden border transition-all ${
                         isActive
-                          ? "bg-primary/20 border-primary shadow-[0_0_20px_rgba(0,212,170,0.45)]"
-                          : "bg-card/70 border-border"
+                          ? "border-primary shadow-[0_0_22px_rgba(0,212,170,0.55)]"
+                          : "border-border/30"
                       }`}
                       style={{
-                        width: idx === 2 ? "78px" : idx === 0 ? "64px" : "60px",
-                        height: idx === 2 ? "46px" : "42px",
-                        borderRadius:
-                          idx === 0
-                              ? "72% 28% 40% 60% / 58% 42% 70% 30%"
-                            : idx === 1
-                                ? "55% 45% 65% 35% / 38% 62% 45% 55%"
-                                : "45% 55% 35% 65% / 62% 38% 65% 35%",
+                        width: `${pocketShell.w}px`,
+                        height: `${pocketShell.h}px`,
+                        borderRadius: pocketShell.r,
+                        background: isActive ? "rgba(0,212,170,0.12)" : "rgba(0,0,0,0.12)",
+                        boxShadow: isActive
+                          ? "inset 0 0 0 1px rgba(255,255,255,0.12), inset 0 8px 16px rgba(0,0,0,0.22), 0 0 18px rgba(0,212,170,0.35)"
+                          : "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 8px 14px rgba(0,0,0,0.2)",
                       }}
                     >
+                      {/* Same pocket recess as static wall holds */}
+                      <span
+                        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+                        style={{
+                          width: "72%",
+                          height: "72%",
+                          borderRadius: "9999px",
+                          background:
+                            "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 20%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0.38) 78%, rgba(0,0,0,0.48) 100%)",
+                          boxShadow:
+                            "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -12px 22px rgba(0,0,0,0.20), inset 0 10px 16px rgba(0,212,170,0.07)",
+                        }}
+                      />
                       {isActive && (
                         <motion.span
                           aria-hidden="true"
-                          className="pointer-events-none absolute left-1 top-1 w-7 h-7 opacity-70 blur-[0.5px]"
+                          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[85%] rounded-full opacity-60"
                           style={{
                             background:
-                              "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.35) 22%, rgba(0,212,170,0.0) 65%)",
+                              "radial-gradient(circle at 35% 30%, rgba(0,212,170,0.45) 0%, transparent 65%)",
                           }}
-                          animate={{
-                            opacity: [0.25, 1, 0.25],
-                            scale: [0.9, 1.15, 0.95],
-                            x: [-6, 10, -2],
-                            y: [-4, 8, -2],
-                          }}
-                          transition={{
-                            duration: 0.7,
-                            ease: "easeInOut",
-                          }}
+                          animate={{ opacity: [0.35, 0.85, 0.45], scale: [0.92, 1.05, 0.98] }}
+                          transition={{ duration: 0.65, ease: "easeInOut" }}
                         />
                       )}
-                      {/* Varied grip shapes (matches the “mixed hold” look) */}
-                      {idx === 0 && (
-                        <>
-                          <span
-                              className="absolute -left-2 top-[22%] w-6 h-4 rounded-[85%_15%_55%_45%/40%_60%_35%_65%] border border-border/50 bg-primary/10"
-                            style={{ transform: "rotate(-16deg)" }}
-                          />
-                          <span
-                              className="absolute -right-2 top-[12%] w-5 h-3 rounded-[70%_30%_35%_65%/55%_45%_70%_30%] bg-black/18 border border-border/40"
-                            style={{ transform: "rotate(10deg)" }}
-                          />
-                        </>
-                      )}
-                      {idx === 1 && (
-                        <>
-                          <span
-                              className="absolute -left-1 top-[40%] w-4 h-3 rounded-[90%_10%_60%_40%/35%_65%_45%_55%] bg-primary/12 border border-border/40"
-                            style={{ transform: "rotate(18deg)" }}
-                          />
-                          <span
-                              className="absolute right-[-2px] top-[14%] w-7 h-4 rounded-[65%_35%_35%_65%/30%_70%_60%_40%] bg-black/14 border border-border/30"
-                              style={{ transform: "rotate(-10deg)" }}
-                          />
-                        </>
-                      )}
-                      {idx === 2 && (
-                        <>
-                          <span
-                              className="absolute -left-2 top-[12%] w-6 h-4 rounded-[80%_20%_45%_55%/55%_45%_35%_65%] bg-primary/12 border border-border/40"
-                            style={{ transform: "rotate(-10deg)" }}
-                          />
-                          <span
-                              className="absolute right-[-2px] bottom-[10%] w-6 h-3 rounded-[60%_40%_30%_70%/65%_35%_55%_45%] bg-black/14 border border-border/30"
-                              style={{ transform: "rotate(16deg)" }}
-                          />
-                        </>
-                      )}
-
-                      <span className="flex items-center justify-center h-full w-full">
-                        <ActiveIcon className="w-5 h-5" />
+                      <span className="relative z-10 flex items-center justify-center h-full w-full">
+                        <ActiveIcon
+                          className={`${pocketShell.icon} drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] ${isActive ? "text-primary" : "text-primary/85"}`}
+                          strokeWidth={2.25}
+                        />
                       </span>
                     </span>
-                    {/* little grip texture */}
-                    <span
-                      className="pointer-events-none absolute inset-0 rounded-[28px] opacity-40"
-                      style={{
-                        background:
-                          "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), transparent 55%), linear-gradient(135deg, rgba(0,212,170,0.18), rgba(2,6,23,0.25))",
-                      }}
-                    />
                   </button>
                 );
               })}
@@ -690,7 +652,7 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
                     setSurpriseBoostTapCount((n) => n + 1);
                     setIsSurpriseHintOpen(true);
                   }}
-                  className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 ${isBoulderDragging ? "pointer-events-none" : "pointer-events-auto cursor-pointer"}`}
+                  className={`absolute z-20 overflow-visible -translate-x-1/2 -translate-y-1/2 ${isBoulderDragging ? "pointer-events-none" : "pointer-events-auto cursor-pointer"}`}
                   style={{
                     left: quizSurpriseHoldConfig.pos.left,
                     top: quizSurpriseHoldConfig.pos.top,
@@ -699,30 +661,30 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
                     height: `${quizSurpriseHoldConfig.h}px`,
                   }}
                 >
+                  {/* Pocket shell only (clipped) — drill/dust live in sibling overlay */}
                   <span
-                    className="relative block border transition-all overflow-visible"
+                    className="relative z-[1] block overflow-hidden border border-border/30 transition-all"
                     style={{
                       width: "100%",
                       height: "100%",
                       borderRadius: quizSurpriseHoldConfig.borderRadius,
-                      background: quizSurpriseHoldConfig.bg,
-                      borderColor: quizSurpriseHoldConfig.border,
-                      boxShadow: `0 0 0 1px ${quizSurpriseHoldConfig.border}, 0 0 30px ${quizSurpriseHoldConfig.glow}`,
+                      background: "rgba(0,0,0,0.12)",
+                      boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 8px 14px rgba(0,0,0,0.2), 0 0 0 1px ${quizSurpriseHoldConfig.border}, 0 0 14px ${quizSurpriseHoldConfig.glow}`,
                     }}
                   >
-                    {/* Pocket / hole inside the surprise hold */}
+                    {/* Pocket recess (same recipe as feature / route pockets) */}
                     {hasRevealedQuizSurprise ? (
                       <motion.span
                         key={`quiz-surprise-pocket-${quizSurpriseNonce}`}
-                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-95"
+                        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-95"
                         style={{
-                          width: "66%",
-                          height: "66%",
+                          width: "72%",
+                          height: "72%",
                           borderRadius: "9999px",
                           background:
-                            "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 22%, rgba(0,0,0,0.14) 48%, rgba(0,0,0,0.30) 78%, rgba(0,0,0,0.38) 100%)",
+                            "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 20%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0.38) 78%, rgba(0,0,0,0.48) 100%)",
                           boxShadow:
-                            "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -12px 22px rgba(0,0,0,0.22), inset 0 10px 16px rgba(0,212,170,0.06)",
+                            "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -12px 22px rgba(0,0,0,0.20), inset 0 10px 16px rgba(0,212,170,0.07)",
                         }}
                         initial={{ scale: 1, filter: "brightness(1)" }}
                         animate={{
@@ -739,99 +701,57 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
                       />
                     ) : (
                       <span
-                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-95"
+                        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-95"
                         style={{
-                          width: "66%",
-                          height: "66%",
+                          width: "72%",
+                          height: "72%",
                           borderRadius: "9999px",
                           background:
-                            "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 22%, rgba(0,0,0,0.14) 48%, rgba(0,0,0,0.30) 78%, rgba(0,0,0,0.38) 100%)",
+                            "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 20%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0.38) 78%, rgba(0,0,0,0.48) 100%)",
                           boxShadow:
-                            "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -12px 22px rgba(0,0,0,0.22), inset 0 10px 16px rgba(0,212,170,0.06)",
+                            "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -12px 22px rgba(0,0,0,0.20), inset 0 10px 16px rgba(0,212,170,0.07)",
                         }}
                       />
                     )}
 
-                    {/* One-shot pulse when quiz finishes */}
-                    {hasRevealedQuizSurprise && (
-                      <>
-                        <motion.span
-                          key={`quiz-surprise-pulse-${quizSurpriseNonce}`}
-                          aria-hidden="true"
-                          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-0 blur-[0.5px]"
-                          style={{
-                            background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.25) 22%, ${quizSurpriseHoldConfig.bg} 50%, rgba(0,0,0,0) 70%)`,
-                          }}
-                          initial={{ opacity: 0, scale: 0.75 }}
-                          animate={{ opacity: [0, 1, 0], scale: [0.85, 1.2, 1.05] }}
-                          transition={{ duration: 1.9, ease: "easeOut" }}
-                        />
-
-                        {/* “Drilling” reveal moment */}
-                        <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                          {/* Drill bit */}
-                          <motion.span
-                            key={`quiz-surprise-drill-${quizSurpriseNonce}`}
-                            aria-hidden="true"
-                        className="absolute left-1/2 top-1/2 -translate-y-1/2 z-[999]"
-                        style={{ width: 72, height: 40, background: "transparent" }}
-                            initial={{ opacity: 0, scale: 0.88, rotate: -2 }}
-                        animate={{
-                          opacity: [0, 1, 1, 0],
-                          // No glide: appear/disappear from the hold contact point.
-                          rotate: [-2, 0, 0, -1],
-                          scale: [0.88, 1.04, 1.0, 0.96],
+                    {/* Tap pulse stays inside pocket bounds */}
+                    {surpriseTapPulseNonce > 0 && (
+                      <motion.span
+                        key={`surprise-tap-pulse-${surpriseTapPulseNonce}`}
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                        style={{
+                          width: "92%",
+                          height: "92%",
+                          border: "1.5px solid rgba(255,255,255,0.70)",
+                          boxShadow: `0 0 0 1px ${quizSurpriseHoldConfig.border}, 0 0 18px ${quizSurpriseHoldConfig.glow}`,
                         }}
-                        transition={{ duration: 7.2, ease: "easeInOut" }}
-                      >
-                        {/* Drill (simplified handheld tool) */}
-                        {/* Drill bit — thin pointed spike */}
-                        <span
-                          aria-hidden="true"
-                          className="absolute"
-                          style={{
-                            left: 0,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            width: 20,
-                            height: 3,
-                            background: "#111111",
-                            clipPath: "polygon(0% 50%, 100% 0%, 100% 100%)",
-                            borderRadius: 0,
-                          }}
-                        />
+                        initial={{ scale: 0.72, opacity: 0.95 }}
+                        animate={{ scale: 1.18, opacity: 0 }}
+                        transition={{ duration: 0.34, ease: "easeOut" }}
+                      />
+                    )}
+                  </span>
 
-                        {/* Body — chunky rounded rectangle */}
-                        <span
-                          aria-hidden="true"
-                          className="absolute"
-                          style={{
-                            left: 18,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            width: 36,
-                            height: 14,
-                            background: "#111111",
-                            borderRadius: "6px 10px 10px 6px",
-                          }}
-                        />
+                  {/* Drill + dust + reveal pulse — large overflow-visible overlay (not clipped) */}
+                  {hasRevealedQuizSurprise && (
+                    <span
+                      className="pointer-events-none absolute left-1/2 top-1/2 z-[100] h-[min(280px,70vw)] w-[min(280px,85vw)] -translate-x-1/2 -translate-y-1/2 overflow-visible"
+                      aria-hidden
+                    >
+                      <motion.span
+                        key={`quiz-surprise-pulse-${quizSurpriseNonce}`}
+                        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full opacity-0 blur-[0.5px]"
+                        style={{
+                          background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.25) 22%, ${quizSurpriseHoldConfig.bg} 50%, rgba(0,0,0,0) 70%)`,
+                        }}
+                        initial={{ opacity: 0, scale: 0.75 }}
+                        animate={{ opacity: [0, 1, 0], scale: [0.85, 1.2, 1.05] }}
+                        transition={{ duration: 1.9, ease: "easeOut" }}
+                      />
 
-                        {/* Handle — vertical grip */}
-                        <span
-                          aria-hidden="true"
-                          className="absolute"
-                          style={{
-                            left: 38,
-                            top: 10,
-                            width: 14,
-                            height: 34,
-                            background: "#111111",
-                            borderRadius: "0 0 8px 8px",
-                            opacity: 0.9,
-                          }}
-                        />
-                      </motion.span>
-
+                      {/* Dust at hold centre (same origin as pulse) — not inside drill box or particles skew sideways */}
+                      <>
                           {/* Drilling dust (stacked layers: chunks, fine cloud, puff rings) */}
 
                           {/* Layer 1: Heavy chalk/concrete chunks (slow, fall/roll away) */}
@@ -929,31 +849,85 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
                               }}
                             />
                           ))}
-                        </span>
                       </>
-                    )}
 
-                    {/* Tap pulse: visual haptic fallback on desktop/iOS without vibration */}
-                    {surpriseTapPulseNonce > 0 && (
-                      <motion.span
-                        key={`surprise-tap-pulse-${surpriseTapPulseNonce}`}
-                        aria-hidden="true"
-                        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                        style={{
-                          width: "92%",
-                          height: "92%",
-                          border: "1.5px solid rgba(255,255,255,0.70)",
-                          boxShadow: `0 0 0 1px ${quizSurpriseHoldConfig.border}, 0 0 18px ${quizSurpriseHoldConfig.glow}`,
-                        }}
-                        initial={{ scale: 0.72, opacity: 0.95 }}
-                        animate={{ scale: 1.18, opacity: 0 }}
-                        transition={{ duration: 0.34, ease: "easeOut" }}
-                      />
-                    )}
-                  </span>
+                      {/* Bit tip at hold centre: anchor left edge at 50%/50%, vertical centre of drill */}
+                      <span
+                        className="pointer-events-none absolute left-1/2 top-1/2 z-[999] overflow-visible"
+                        style={{ marginTop: -20 }}
+                      >
+                        <motion.span
+                          key={`quiz-surprise-drill-${quizSurpriseNonce}`}
+                          aria-hidden="true"
+                          className="relative block"
+                          style={{
+                            width: 72,
+                            height: 40,
+                            background: "transparent",
+                            transformOrigin: "2px 20px",
+                          }}
+                          initial={{ opacity: 0, scale: 0.88, rotate: 12 }}
+                          animate={{
+                            opacity: [0, 1, 1, 0],
+                            rotate: [12, 4, 2, 6],
+                            scale: [0.88, 1.04, 1.0, 0.96],
+                          }}
+                          transition={{ duration: 7.2, ease: "easeInOut" }}
+                        >
+                          {/* Drill (simplified handheld tool) */}
+                          {/* Drill bit — thin pointed spike */}
+                          <span
+                            aria-hidden="true"
+                            className="absolute"
+                            style={{
+                              left: 0,
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              width: 20,
+                              height: 3,
+                              background: "#111111",
+                              clipPath: "polygon(0% 50%, 100% 0%, 100% 100%)",
+                              borderRadius: 0,
+                            }}
+                          />
+
+                          {/* Body — chunky rounded rectangle */}
+                          <span
+                            aria-hidden="true"
+                            className="absolute"
+                            style={{
+                              left: 18,
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              width: 36,
+                              height: 14,
+                              background: "#111111",
+                              borderRadius: "6px 10px 10px 6px",
+                            }}
+                          />
+
+                          {/* Handle — vertical grip */}
+                          <span
+                            aria-hidden="true"
+                            className="absolute"
+                            style={{
+                              left: 38,
+                              top: 10,
+                              width: 14,
+                              height: 34,
+                              background: "#111111",
+                              borderRadius: "0 0 8px 8px",
+                              opacity: 0.9,
+                            }}
+                          />
+                        </motion.span>
+                      </span>
+                    </span>
+                  )}
+
                   {isSurpriseHintOpen && (
                     <motion.span
-                      className="absolute left-1/2 -top-24 sm:-top-28 -translate-x-1/2 w-[15rem] sm:w-[18rem] rounded-xl border border-primary/40 bg-background/95 px-3 py-2 text-[11px] sm:text-xs text-foreground shadow-[0_0_24px_rgba(0,212,170,0.22)]"
+                      className="absolute left-1/2 -top-24 sm:-top-28 z-[120] -translate-x-1/2 w-[15rem] sm:w-[18rem] rounded-xl border border-primary/40 bg-background/95 px-3 py-2 text-[11px] sm:text-xs text-foreground shadow-[0_0_24px_rgba(0,212,170,0.22)]"
                       initial={{ opacity: 0, y: 10, scale: 0.85 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ duration: 0.28, ease: "easeOut" }}
@@ -970,11 +944,10 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
               )}
 
               {[
-                // Center-biased positions to avoid any “on outline” appearance.
-                { left: "22%", top: "28%", w: "30px", h: "16px", r: "90% 10% 55% 45% / 35% 65% 28% 72%", rot: "-18deg", bg: "bg-primary/10" },
-                { left: "46%", top: "18%", w: "30px", h: "16px", r: "88% 12% 60% 40% / 45% 55% 25% 75%", rot: "10deg", bg: "bg-black/14" },
-                { left: "74%", top: "34%", w: "30px", h: "16px", r: "82% 18% 55% 45% / 40% 60% 35% 65%", rot: "16deg", bg: "bg-primary/10" },
-                { left: "42%", top: "74%", w: "26px", h: "14px", r: "92% 8% 50% 50% / 40% 60% 30% 70%", rot: "-10deg", bg: "bg-black/14" },
+                { left: "28%", top: "24%", w: "32px", h: "17px", r: "90% 10% 55% 45% / 35% 65% 28% 72%", rot: "-18deg", bg: "bg-primary/10" },
+                { left: "74%", top: "22%", w: "24px", h: "13px", r: "88% 12% 60% 40% / 45% 55% 25% 75%", rot: "12deg", bg: "bg-black/14" },
+                { left: "76%", top: "62%", w: "30px", h: "16px", r: "82% 18% 55% 45% / 40% 60% 35% 65%", rot: "14deg", bg: "bg-primary/10" },
+                { left: "26%", top: "50%", w: "21px", h: "12px", r: "92% 8% 50% 50% / 40% 60% 30% 70%", rot: "-11deg", bg: "bg-black/14" },
               ].map((d, i) => (
                 <span
                   key={i}
@@ -1008,10 +981,10 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
             </motion.div>
           </div>
 
-          <div
-            className="relative overflow-hidden rounded-xl border border-primary/20 bg-background/40 p-5 sm:p-6"
+          <Link
+            href={FEATURE_ITEMS[activeFeatureIdx]?.href ?? "/"}
+            className="group relative block overflow-hidden rounded-xl border border-primary/20 bg-background/40 p-5 sm:p-6 text-left cursor-pointer transition-colors hover:border-primary/40 hover:bg-background/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             style={{
-              // Keep glow contained to the card itself (no outside bleed).
               boxShadow:
                 "inset 0 0 0 1px rgba(0,212,170,0.10), inset 0 0 28px rgba(0,212,170,0.12)",
             }}
@@ -1024,9 +997,15 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
               }}
             />
             <div className="relative z-10">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Now showing</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Now showing</p>
+                <span className="flex items-center gap-1 text-xs font-medium text-primary opacity-90 group-hover:opacity-100 shrink-0">
+                  Open
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </div>
               <div className="relative">
-                <h3 className="font-display text-xl sm:text-2xl uppercase tracking-wider mt-2">
+                <h3 className="font-display text-xl sm:text-2xl uppercase tracking-wider mt-2 pr-2">
                   {FEATURE_ITEMS[activeFeatureIdx]?.title}
                 </h3>
                 <div className="absolute left-0 right-0 -bottom-1 h-[2px] bg-primary/15 rounded-full overflow-hidden">
@@ -1043,7 +1022,7 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
                 {FEATURE_ITEMS[activeFeatureIdx]?.desc}
               </p>
             </div>
-          </div>
+          </Link>
         </div>
         </Card>
       </div>
@@ -1131,6 +1110,7 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
                 <Button
                   variant="ghost"
                   onClick={() => {
+                    setSelectedQuestionIndices(shuffleAndPickN(QUIZ_QUESTION_BANK.length, QUIZ_LENGTH));
                     setQuizStep(0);
                     setQuiz({});
                     setResultType(null);
@@ -1145,23 +1125,20 @@ const FOLLOW_UP_FUNNY_BOOSTS = [
             <div className="mt-6 rounded-xl border border-border bg-background/40 p-5">
               <p className="text-xs uppercase tracking-widest text-muted-foreground">Your result</p>
               <p className="font-display text-3xl sm:text-4xl mt-2 text-primary drop-shadow-[0_0_10px_rgba(0,212,170,0.15)] break-words">
-                {resultType}
+                The {resultType}
               </p>
+              {resultBlurb ? (
+                <p className="text-muted-foreground mt-3 leading-relaxed text-sm sm:text-base">{resultBlurb}</p>
+              ) : null}
               <p className="text-sm sm:text-base text-muted-foreground mt-3">
                 Check the boulder to see a surprise.
               </p>
-
-              {nextAdvice ? (
-                <>
-                  <p className="font-semibold text-xl mt-3">{nextAdvice.title}</p>
-                  <p className="text-muted-foreground mt-2 leading-relaxed">{nextAdvice.body}</p>
-                </>
-              ) : null}
 
               <div className="mt-5">
                 <Button
                   variant="ghost"
                   onClick={() => {
+                    setSelectedQuestionIndices(shuffleAndPickN(QUIZ_QUESTION_BANK.length, QUIZ_LENGTH));
                     setQuizStep(0);
                     setQuiz({});
                     setResultType(null);

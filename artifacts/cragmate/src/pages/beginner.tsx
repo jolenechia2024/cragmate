@@ -90,12 +90,18 @@ export default function Beginner() {
                   Log your first session
                 </Button>
               </Link>
-              <Link href="/gyms" className="w-full sm:w-auto">
+              <Link href="/gyms?beginners=1" className="w-full sm:w-auto">
                 <Button size="lg" variant="outline" className="gap-2 w-full sm:w-auto">
                   Explore beginner-friendly gyms
                 </Button>
               </Link>
             </div>
+            <p className="text-muted-foreground text-sm mt-3 max-w-2xl">
+              Opens the gym list with <strong className="text-foreground">Beginner friendly!</strong> turned on.
+              Tagged outlets show <strong className="text-foreground">Community insights</strong> under the address with
+              notes from climber community recommendations. Use each outlet's{" "}
+              <strong className="text-foreground">Website</strong> button to verify current pricing and facilities.
+            </p>
           </div>
         </div>
       </Card>

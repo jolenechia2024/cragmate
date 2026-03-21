@@ -25,6 +25,8 @@ router.get("/gyms", async (_req, res) => {
         ? g.routesetScheduleUpdatedAt.toISOString()
         : undefined,
       description: g.description ?? undefined,
+      beginnerFriendly: g.beginnerFriendly,
+      beginnerNotes: g.beginnerNotes ?? undefined,
     }));
     res.json(mapped);
   } catch (err) {

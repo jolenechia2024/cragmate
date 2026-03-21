@@ -1,4 +1,4 @@
-import { pgTable, serial, text, numeric, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric, jsonb, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -22,6 +22,9 @@ export const gymsTable = pgTable("gyms", {
     extractedText?: string;
   }>(),
   routesetScheduleUpdatedAt: timestamp("routeset_schedule_updated_at", { withTimezone: true }),
+  /** Editorial flag: intro/taster options, easier circuits, mall/MRT access, or strong first-timer onboarding */
+  beginnerFriendly: boolean("beginner_friendly").notNull().default(false),
+  beginnerNotes: text("beginner_notes"),
 });
 
 export const insertGymSchema = createInsertSchema(gymsTable).omit({ id: true });

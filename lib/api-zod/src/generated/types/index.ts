@@ -8,6 +8,7 @@
 
 export * from "./climb";
 export * from "./createClimbRequest";
+export * from "./createPartnerMessageRequest";
 export * from "./createPartnerPostRequest";
 export * from "./createSessionRequest";
 export * from "./errorResponse";
@@ -18,6 +19,7 @@ export * from "./gymRoutesetSchedule";
 export * from "./healthStatus";
 export * from "./listSessionsParams";
 export * from "./monthCount";
+export * from "./partnerMessage";
 export * from "./partnerPost";
 export * from "./progressionPoint";
 export * from "./session";

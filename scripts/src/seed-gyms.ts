@@ -1,5 +1,44 @@
 import { db, gymsTable } from "@workspace/db";
 
+/**
+ * One-line beginner notes copied from operator/public listings.
+ * Prefix keeps UI copy factual; verify current offers on each outlet's Website button.
+ */
+const BEGINNER_NOTES: Record<string, string> = {
+  "Ground Up Climbing":
+    "Well-rounded gym with bouldering, auto-belay and top-rope; supportive environment for first-timers exploring both ropes and bouldering.",
+
+  "Climb Central @ Kallang Wave Mall":
+    "Highly accessible near MRT; iconic tall wall with auto-belay and beginner-friendly routes.",
+
+  "Climb Central @ Novena (Velocity)":
+    "Very beginner-friendly setup with auto-belay and top-rope; commonly recommended first gym.",
+
+  "Climb Central @ Funan":
+    "Central location; visible and approachable layout makes it easy for first-time visitors.",
+
+  "Climb Central @ Katong (i12)":
+    "Rope-focused environment with auto-belay; calmer and more family-oriented atmosphere.",
+
+  "BFF Climb @ Bendemeer (CT Hub)":
+    "Good mix of bouldering and auto-belay with frequent route resets; beginner-friendly progression.",
+
+  "BFF Climb @ Our Tampines Hub":
+    "Spacious with natural ventilation; offers bouldering, auto-belay and top-rope with strong beginner support.",
+
+  "Fit Bloc @ Kent Ridge (Science Park)":
+    "Large facility with high auto-belay walls; great for first-timers trying height safely.",
+
+  "Boulder Movement @ Tai Seng":
+    "Spacious bouldering gym with many easier routes; one of the more beginner-friendly bouldering options.",
+
+  "Boulder+ @ Aperia Mall":
+    "Wide range of difficulty levels with approachable beginner problems; good entry into bouldering.",
+
+  "OYEYO Boulder Home":
+    "Accessible and budget-friendly bouldering gym with varied wall angles suitable for beginners.",
+};
+
 const gyms = [
   // --- GROUND UP ---
   {
@@ -352,7 +391,12 @@ const gyms = [
 async function main() {
   console.log("Seeding gyms with real Singapore data...");
   await db.delete(gymsTable);
-  await db.insert(gymsTable).values(gyms);
+  const rows = gyms.map((g) => ({
+    ...g,
+    beginnerFriendly: Object.prototype.hasOwnProperty.call(BEGINNER_NOTES, g.name),
+    beginnerNotes: BEGINNER_NOTES[g.name] ?? null,
+  }));
+  await db.insert(gymsTable).values(rows);
   console.log(`Seeded ${gyms.length} gyms.`);
   process.exit(0);
 }

@@ -354,6 +354,15 @@ components:
           format: date-time
         description:
           type: string
+        beginnerFriendly:
+          type: boolean
+          description: >-
+            When true, this outlet is especially beginner-friendly (intro/taster passes, easier circuits,
+            mall or MRT access, auto-belay/top-rope for first visits, or strong first-timer onboarding).
+        beginnerNotes:
+          type: string
+          description: >-
+            Short Cragmate note on why the outlet is tagged beginner-friendly (not an official gym claim).
       required:
         - id
         - name

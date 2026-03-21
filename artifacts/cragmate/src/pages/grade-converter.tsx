@@ -1,7 +1,7 @@
 import { Layout } from "@/components/layout";
 import { Card, Input } from "@/components/ui";
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -283,23 +283,23 @@ export default function GradeConverter() {
       </div>
 
       <Card className="p-6 mb-8 border-primary/20 shadow-[0_0_30px_rgba(0,212,170,0.05)]">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <div className="md:col-span-2 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
               placeholder="Search by V (e.g. V4) or gym grade..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-12 text-lg h-14 bg-background"
+              className="h-14 pl-12 text-base sm:text-lg bg-background"
             />
           </div>
 
-          <div>
+          <div className="relative">
             <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2">
               Gym system
             </label>
             <select
-              className="w-full h-14 rounded-md border border-border bg-background px-4 text-sm"
+              className="w-full h-14 appearance-none rounded-md border border-border bg-background px-4 pr-10 text-base"
               value={selectedGymSystem}
               onChange={(e) => setSelectedGymSystem(e.target.value as GymSystemName)}
             >
@@ -309,6 +309,7 @@ export default function GradeConverter() {
                 </option>
               ))}
             </select>
+            <ChevronDown className="pointer-events-none absolute right-4 top-[calc(50%+0.7rem)] -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           </div>
         </div>
       </Card>
@@ -316,10 +317,16 @@ export default function GradeConverter() {
       <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xl">
         {/* Desktop/tablet grid */}
         <div className="hidden sm:block">
-          <div className="grid grid-cols-3 bg-teal-950/20 border-b border-border p-4">
-            <div className="font-display text-xl tracking-wider text-muted-foreground uppercase">V-Scale</div>
-            <div className="font-display text-xl tracking-wider text-muted-foreground uppercase">{selectedGymSystem}</div>
-            <div className="font-display text-xl tracking-wider text-muted-foreground uppercase">Experience</div>
+          <div className="grid grid-cols-3 bg-teal-950/20 border-b border-border p-4 items-center">
+            <div className="font-display text-xl tracking-wider text-muted-foreground uppercase text-center leading-none">
+              V-Scale
+            </div>
+            <div className="font-display text-xl tracking-wider text-muted-foreground uppercase text-center leading-none">
+              {selectedGymSystem}
+            </div>
+            <div className="font-display text-xl tracking-wider text-muted-foreground uppercase text-center leading-none">
+              Experience
+            </div>
           </div>
           <div className="divide-y divide-border">
             {filteredGrades.map((grade) => (
@@ -340,15 +347,17 @@ export default function GradeConverter() {
                     className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent pointer-events-none"
                   />
                 )}
-                <div
-                  className={cn(
-                    "text-2xl font-bold transition-colors relative z-10",
-                    selectedGrade === grade.v ? "text-primary" : "",
-                  )}
-                >
-                  {grade.v}
+                <div className="relative z-10 justify-self-center">
+                  <div
+                    className={cn(
+                      "text-2xl font-bold transition-colors",
+                      selectedGrade === grade.v ? "text-primary" : "",
+                    )}
+                  >
+                    {grade.v}
+                  </div>
                 </div>
-                <div className="relative z-10 justify-self-end">
+                <div className="relative z-10 justify-self-center">
                   {(() => {
                     const gymGrade = getGymGrade(selectedGymSystem, grade);
                     const theme = shouldUseNeutralChip(selectedGymSystem, gymGrade)
@@ -357,7 +366,7 @@ export default function GradeConverter() {
                     return (
                       <span
                         className={cn(
-                          "inline-flex items-center justify-center min-w-[6rem] max-w-[6rem] min-h-[3rem] px-2 py-1.5 rounded-md font-bold tracking-wider uppercase text-[11px] shadow-sm",
+                          "inline-flex items-center justify-center w-[6.25rem] min-h-[3rem] px-2 py-1.5 rounded-md font-bold tracking-wider uppercase text-[11px] shadow-sm text-center",
                           theme.hue,
                           theme.text,
                           selectedGrade === grade.v ? "scale-105 transition-transform" : "transition-transform",
@@ -369,13 +378,13 @@ export default function GradeConverter() {
                     );
                   })()}
                 </div>
-                <div className="relative z-10 justify-self-end">
+                <div className="relative z-10 justify-self-center">
                   {(() => {
                     const exp = getExperienceBand(grade.v);
                     return (
                       <span
                         className={cn(
-                          "inline-flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm min-w-[9rem] max-w-[9rem] min-h-[3rem] leading-tight text-center",
+                          "inline-flex flex-col items-center justify-center gap-0.5 w-[9.25rem] px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm min-h-[3rem] leading-tight text-center",
                           exp.hue,
                           exp.text,
                         )}
@@ -404,41 +413,27 @@ export default function GradeConverter() {
               ? { hue: "bg-muted/40 border border-border", text: "text-foreground" }
               : getGymGradeTheme(selectedGymSystem, gymGrade);
 
-            const open = selectedGrade === grade.v;
-
             return (
-              <button
-                type="button"
-                key={grade.v}
-                onClick={() => setSelectedGrade(open ? null : grade.v)}
-                className={cn(
-                  "w-full text-left p-4 transition-colors",
-                  open ? "bg-primary/10" : "hover:bg-accent/40",
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="font-display text-2xl tracking-wider uppercase">
-                    <span className={cn(open ? "text-primary" : "text-foreground")}>{grade.v}</span>
-                    <span className="text-xs text-muted-foreground ml-2 align-middle">V-Scale</span>
-                  </div>
+              <div key={grade.v} className="w-full text-left p-4">
+                <div className="font-display text-2xl tracking-wider uppercase">
+                  <span className="text-foreground">{grade.v}</span>
+                  <span className="text-xs text-muted-foreground ml-2 align-middle">V-Scale</span>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-3">
                   <span
                     className={cn(
-                      // Mobile: allow the chip to shrink to fit narrow screens.
-                      "inline-flex items-center justify-center min-w-[5.5rem] max-w-[6.5rem] min-h-[3rem] px-2 py-1.5 rounded-md font-bold tracking-wider uppercase text-xs shadow-sm break-words",
+                      "inline-flex items-center justify-center w-full min-h-[3rem] px-2 py-1.5 rounded-md font-bold tracking-wider uppercase text-[11px] shadow-sm text-center",
                       theme.hue,
                       theme.text,
                     )}
                     title={gymGrade ?? "No mapping available"}
                   >
-                    {selectedGymSystem}: {gymGrade ?? "—"}
+                    {gymGrade ?? "—"}
                   </span>
-                </div>
-
-                <div className="mt-3 flex items-start justify-between gap-3">
                   <span
                     className={cn(
-                      // Mobile: keep chips readable but allow shrinking to avoid overflow.
-                      "inline-flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm min-w-[7rem] max-w-[8rem] min-h-[3rem] leading-tight text-center break-words",
+                      "inline-flex flex-col items-center justify-center gap-0.5 w-full px-3 py-1.5 rounded-md text-xs font-semibold shadow-sm min-h-[3rem] leading-tight text-center",
                       exp.hue,
                       exp.text,
                     )}
@@ -447,12 +442,8 @@ export default function GradeConverter() {
                     <span className="uppercase tracking-wider">{exp.label}</span>
                     <span className="opacity-80 font-medium normal-case leading-tight">{exp.sub}</span>
                   </span>
-
-                  <span className="text-xs text-muted-foreground">
-                    Tap to {open ? "collapse" : "expand"}
-                  </span>
                 </div>
-              </button>
+              </div>
             );
           })}
 

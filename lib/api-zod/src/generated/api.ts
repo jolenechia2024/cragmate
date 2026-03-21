@@ -49,6 +49,16 @@ export const ListGymsResponseItem = zod.object({
     .describe("Best-effort scraped routesetting schedule snapshot"),
   routesetScheduleUpdatedAt: zod.date().optional(),
   description: zod.string().optional(),
+  beginnerFriendly: zod
+    .boolean()
+    .optional()
+    .describe(
+      "When true, this outlet is especially beginner-friendly (intro passes, easier circuits, family\/rope options, or strong first-timer onboarding). Not set for every gym.",
+    ),
+  beginnerNotes: zod
+    .string()
+    .optional()
+    .describe("Short Cragmate note on why the outlet is tagged beginner-friendly."),
 });
 export const ListGymsResponse = zod.array(ListGymsResponseItem);
 
@@ -233,4 +243,36 @@ export const CreatePartnerPostBody = zod.object({
  */
 export const DeletePartnerPostParams = zod.object({
   id: zod.coerce.number(),
+});
+
+/**
+ * @summary List messages for a partner post
+ */
+export const ListPartnerMessagesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListPartnerMessagesResponseItem = zod.object({
+  id: zod.number(),
+  postId: zod.number(),
+  senderId: zod.string(),
+  senderName: zod.string(),
+  body: zod.string(),
+  createdAt: zod.string(),
+});
+export const ListPartnerMessagesResponse = zod.array(
+  ListPartnerMessagesResponseItem,
+);
+
+/**
+ * @summary Create a message for a partner post
+ */
+export const CreatePartnerMessageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const CreatePartnerMessageBody = zod.object({
+  senderId: zod.string(),
+  senderName: zod.string(),
+  body: zod.string(),
 });

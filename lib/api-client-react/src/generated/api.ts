@@ -19,6 +19,7 @@ import type {
 import type {
   Climb,
   CreateClimbRequest,
+  CreatePartnerMessageRequest,
   CreatePartnerPostRequest,
   CreateSessionRequest,
   ErrorResponse,
@@ -26,6 +27,7 @@ import type {
   Gym,
   HealthStatus,
   ListSessionsParams,
+  PartnerMessage,
   PartnerPost,
   Session,
   SessionWithClimbs,
@@ -1127,4 +1129,179 @@ export const useDeletePartnerPost = <
   TContext
 > => {
   return useMutation(getDeletePartnerPostMutationOptions(options));
+};
+
+/**
+ * @summary List messages for a partner post
+ */
+export const getListPartnerMessagesUrl = (id: number) => {
+  return `/api/partner-posts/${id}/messages`;
+};
+
+export const listPartnerMessages = async (
+  id: number,
+  options?: RequestInit,
+): Promise<PartnerMessage[]> => {
+  return customFetch<PartnerMessage[]>(getListPartnerMessagesUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPartnerMessagesQueryKey = (id: number) => {
+  return [`/api/partner-posts/${id}/messages`] as const;
+};
+
+export const getListPartnerMessagesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPartnerMessages>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPartnerMessages>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPartnerMessagesQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPartnerMessages>>
+  > = ({ signal }) => listPartnerMessages(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPartnerMessages>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPartnerMessagesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPartnerMessages>>
+>;
+export type ListPartnerMessagesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List messages for a partner post
+ */
+
+export function useListPartnerMessages<
+  TData = Awaited<ReturnType<typeof listPartnerMessages>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPartnerMessages>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPartnerMessagesQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a message for a partner post
+ */
+export const getCreatePartnerMessageUrl = (id: number) => {
+  return `/api/partner-posts/${id}/messages`;
+};
+
+export const createPartnerMessage = async (
+  id: number,
+  createPartnerMessageRequest: CreatePartnerMessageRequest,
+  options?: RequestInit,
+): Promise<PartnerMessage> => {
+  return customFetch<PartnerMessage>(getCreatePartnerMessageUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createPartnerMessageRequest),
+  });
+};
+
+export const getCreatePartnerMessageMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPartnerMessage>>,
+    TError,
+    { id: number; data: BodyType<CreatePartnerMessageRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPartnerMessage>>,
+  TError,
+  { id: number; data: BodyType<CreatePartnerMessageRequest> },
+  TContext
+> => {
+  const mutationKey = ["createPartnerMessage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPartnerMessage>>,
+    { id: number; data: BodyType<CreatePartnerMessageRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createPartnerMessage(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePartnerMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPartnerMessage>>
+>;
+export type CreatePartnerMessageMutationBody =
+  BodyType<CreatePartnerMessageRequest>;
+export type CreatePartnerMessageMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a message for a partner post
+ */
+export const useCreatePartnerMessage = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPartnerMessage>>,
+    TError,
+    { id: number; data: BodyType<CreatePartnerMessageRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPartnerMessage>>,
+  TError,
+  { id: number; data: BodyType<CreatePartnerMessageRequest> },
+  TContext
+> => {
+  return useMutation(getCreatePartnerMessageMutationOptions(options));
 };
