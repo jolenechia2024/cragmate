@@ -13,7 +13,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { motion, useMotionValue } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "framer-motion";
 
 export default function Home() {
 const QUIZ_STORAGE_KEY = "cragmate_climber_quiz_v4";
@@ -96,6 +96,170 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     }
   });
   const [activeFeatureIdx, setActiveFeatureIdx] = useState(0);
+  // Boulder rotation is drag-controlled in 3D (no auto-rotation).
+  const boulderRotateX = useMotionValue(8);
+  const boulderRotateY = useMotionValue(-12);
+  const startPointerXRef = useRef<number | null>(null);
+  const startPointerYRef = useRef<number | null>(null);
+  const lastPointerXRef = useRef<number | null>(null);
+  const lastPointerYRef = useRef<number | null>(null);
+  const dragMovedForClickRef = useRef(false);
+  const [isBoulderDragging, setIsBoulderDragging] = useState(false);
+  const isBoulderDraggingRef = useRef(false);
+  const [surpriseTapPulseNonce, setSurpriseTapPulseNonce] = useState(0);
+  const [activeHoldFace, setActiveHoldFace] = useState<"front" | "right" | "back" | "left">("front");
+  const rightFaceOpacity = useTransform(boulderRotateY, (v) => {
+    const s = Math.sin((v * Math.PI) / 180);
+    return 0.08 + Math.max(0, s) * 0.52;
+  });
+  const leftFaceOpacity = useTransform(boulderRotateY, (v) => {
+    const s = Math.sin((v * Math.PI) / 180);
+    return 0.08 + Math.max(0, -s) * 0.52;
+  });
+  const topFaceOpacity = useTransform(boulderRotateX, (v) => {
+    const s = Math.sin((-v * Math.PI) / 180);
+    return 0.08 + Math.max(0, s) * 0.42;
+  });
+  function clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+  }
+  function normalizeDegrees(angle: number): number {
+    const n = angle % 360;
+    return n < 0 ? n + 360 : n;
+  }
+  function getFacingFace(angleDeg: number): "front" | "right" | "back" | "left" {
+    const a = normalizeDegrees(angleDeg);
+    if (a >= 45 && a < 135) return "right";
+    if (a >= 135 && a < 225) return "back";
+    if (a >= 225 && a < 315) return "left";
+    return "front";
+  }
+  const activeHoldFaceRotateY = activeHoldFace === "front" ? 0 : activeHoldFace === "right" ? 90 : activeHoldFace === "back" ? 180 : -90;
+  type NonFeatureHold = {
+    left: string;
+    top: string;
+    kind: "jug" | "crimp" | "sloper" | "edge" | "pinch" | "pocket" | "sidepull";
+    w: string;
+    h: string;
+    r: string;
+    insetW: string;
+    insetH: string;
+    rot: string;
+  };
+  const nonFeatureRouteUpperByFace: Record<"front" | "right" | "back" | "left", NonFeatureHold[]> = {
+    front: [
+      { left: "38%", top: "68%", kind: "jug", w: "40px", h: "28px", r: "34% 34% 42% 42% / 38% 38% 62% 62%", insetW: "58%", insetH: "58%", rot: "-14deg" },
+      { left: "42%", top: "60%", kind: "crimp", w: "28px", h: "10px", r: "22% 22% 36% 36% / 56% 56% 44% 44%", insetW: "82%", insetH: "40%", rot: "11deg" },
+      { left: "62%", top: "34%", kind: "edge", w: "30px", h: "12px", r: "18% 18% 24% 24% / 48% 48% 52% 52%", insetW: "86%", insetH: "34%", rot: "8deg" },
+      { left: "66%", top: "58%", kind: "pinch", w: "18px", h: "34px", r: "44% 44% 44% 44% / 28% 28% 72% 72%", insetW: "58%", insetH: "56%", rot: "14deg" },
+    ],
+    right: [
+      { left: "36%", top: "70%", kind: "pocket", w: "30px", h: "24px", r: "44% 44% 48% 48% / 42% 42% 58% 58%", insetW: "54%", insetH: "44%", rot: "-12deg" },
+      { left: "44%", top: "56%", kind: "edge", w: "30px", h: "12px", r: "18% 18% 24% 24% / 48% 48% 52% 52%", insetW: "86%", insetH: "34%", rot: "8deg" },
+      { left: "58%", top: "40%", kind: "sidepull", w: "20px", h: "34px", r: "42% 42% 42% 42% / 24% 24% 76% 76%", insetW: "58%", insetH: "56%", rot: "-8deg" },
+      { left: "68%", top: "60%", kind: "crimp", w: "28px", h: "10px", r: "22% 22% 36% 36% / 56% 56% 44% 44%", insetW: "82%", insetH: "40%", rot: "15deg" },
+    ],
+    back: [
+      { left: "34%", top: "66%", kind: "jug", w: "38px", h: "26px", r: "34% 34% 42% 42% / 38% 38% 62% 62%", insetW: "58%", insetH: "58%", rot: "-10deg" },
+      { left: "46%", top: "52%", kind: "sloper", w: "34px", h: "18px", r: "58% 42% 46% 54% / 72% 74% 26% 28%", insetW: "68%", insetH: "50%", rot: "9deg" },
+      { left: "60%", top: "38%", kind: "pinch", w: "18px", h: "34px", r: "44% 44% 44% 44% / 28% 28% 72% 72%", insetW: "58%", insetH: "56%", rot: "-6deg" },
+      { left: "68%", top: "56%", kind: "edge", w: "30px", h: "12px", r: "18% 18% 24% 24% / 48% 48% 52% 52%", insetW: "86%", insetH: "34%", rot: "12deg" },
+    ],
+    left: [
+      { left: "40%", top: "70%", kind: "sidepull", w: "20px", h: "34px", r: "42% 42% 42% 42% / 24% 24% 76% 76%", insetW: "58%", insetH: "56%", rot: "-14deg" },
+      { left: "48%", top: "58%", kind: "pocket", w: "30px", h: "24px", r: "44% 44% 48% 48% / 42% 42% 58% 58%", insetW: "54%", insetH: "44%", rot: "10deg" },
+      { left: "58%", top: "44%", kind: "crimp", w: "28px", h: "10px", r: "22% 22% 36% 36% / 56% 56% 44% 44%", insetW: "82%", insetH: "40%", rot: "-8deg" },
+      { left: "66%", top: "34%", kind: "jug", w: "40px", h: "28px", r: "34% 34% 42% 42% / 38% 38% 62% 62%", insetW: "58%", insetH: "58%", rot: "7deg" },
+    ],
+  };
+  const nonFeatureRouteLowerByFace: Record<"front" | "right" | "back" | "left", NonFeatureHold[]> = {
+    front: [
+      { left: "28%", top: "24%", kind: "sloper", w: "36px", h: "20px", r: "58% 42% 46% 54% / 72% 74% 26% 28%", insetW: "70%", insetH: "50%", rot: "-18deg" },
+      { left: "74%", top: "22%", kind: "crimp", w: "26px", h: "10px", r: "22% 22% 34% 34% / 56% 56% 44% 44%", insetW: "82%", insetH: "40%", rot: "12deg" },
+      { left: "26%", top: "50%", kind: "edge", w: "24px", h: "10px", r: "18% 18% 24% 24% / 48% 48% 52% 52%", insetW: "86%", insetH: "34%", rot: "-11deg" },
+      { left: "22%", top: "66%", kind: "pocket", w: "30px", h: "24px", r: "44% 44% 48% 48% / 42% 42% 58% 58%", insetW: "54%", insetH: "44%", rot: "-8deg" },
+      { left: "80%", top: "42%", kind: "sidepull", w: "20px", h: "34px", r: "42% 42% 42% 42% / 24% 24% 76% 76%", insetW: "58%", insetH: "56%", rot: "-12deg" },
+    ],
+    right: [
+      { left: "30%", top: "24%", kind: "crimp", w: "26px", h: "10px", r: "22% 22% 34% 34% / 56% 56% 44% 44%", insetW: "82%", insetH: "40%", rot: "-16deg" },
+      { left: "74%", top: "24%", kind: "jug", w: "38px", h: "27px", r: "34% 34% 42% 42% / 38% 38% 62% 62%", insetW: "58%", insetH: "58%", rot: "10deg" },
+      { left: "24%", top: "50%", kind: "pocket", w: "30px", h: "24px", r: "44% 44% 48% 48% / 42% 42% 58% 58%", insetW: "54%", insetH: "44%", rot: "-9deg" },
+      { left: "30%", top: "68%", kind: "sloper", w: "36px", h: "20px", r: "58% 42% 46% 54% / 72% 74% 26% 28%", insetW: "70%", insetH: "50%", rot: "14deg" },
+      { left: "78%", top: "44%", kind: "edge", w: "24px", h: "10px", r: "18% 18% 24% 24% / 48% 48% 52% 52%", insetW: "86%", insetH: "34%", rot: "-10deg" },
+    ],
+    back: [
+      { left: "26%", top: "24%", kind: "pinch", w: "18px", h: "33px", r: "44% 44% 44% 44% / 28% 28% 72% 72%", insetW: "58%", insetH: "56%", rot: "-12deg" },
+      { left: "74%", top: "24%", kind: "sloper", w: "36px", h: "20px", r: "58% 42% 46% 54% / 72% 74% 26% 28%", insetW: "70%", insetH: "50%", rot: "11deg" },
+      { left: "26%", top: "52%", kind: "sidepull", w: "20px", h: "34px", r: "42% 42% 42% 42% / 24% 24% 76% 76%", insetW: "58%", insetH: "56%", rot: "-8deg" },
+      { left: "22%", top: "68%", kind: "edge", w: "24px", h: "10px", r: "18% 18% 24% 24% / 48% 48% 52% 52%", insetW: "86%", insetH: "34%", rot: "9deg" },
+      { left: "78%", top: "44%", kind: "pocket", w: "30px", h: "24px", r: "44% 44% 48% 48% / 42% 42% 58% 58%", insetW: "54%", insetH: "44%", rot: "-12deg" },
+    ],
+    left: [
+      { left: "28%", top: "24%", kind: "edge", w: "24px", h: "10px", r: "18% 18% 24% 24% / 48% 48% 52% 52%", insetW: "86%", insetH: "34%", rot: "-16deg" },
+      { left: "72%", top: "24%", kind: "pocket", w: "30px", h: "24px", r: "44% 44% 48% 48% / 42% 42% 58% 58%", insetW: "54%", insetH: "44%", rot: "10deg" },
+      { left: "24%", top: "52%", kind: "jug", w: "38px", h: "27px", r: "34% 34% 42% 42% / 38% 38% 62% 62%", insetW: "58%", insetH: "58%", rot: "-11deg" },
+      { left: "24%", top: "68%", kind: "crimp", w: "26px", h: "10px", r: "22% 22% 34% 34% / 56% 56% 44% 44%", insetW: "82%", insetH: "40%", rot: "8deg" },
+      { left: "78%", top: "42%", kind: "sloper", w: "36px", h: "20px", r: "58% 42% 46% 54% / 72% 74% 26% 28%", insetW: "70%", insetH: "50%", rot: "-10deg" },
+    ],
+  };
+  const activeUpperNonFeatureHolds = nonFeatureRouteUpperByFace[activeHoldFace];
+  const activeLowerNonFeatureHolds = nonFeatureRouteLowerByFace[activeHoldFace];
+  function handleBoulderPointerDown(e: ReactPointerEvent<HTMLElement>) {
+    startPointerXRef.current = e.clientX;
+    startPointerYRef.current = e.clientY;
+    dragMovedForClickRef.current = false;
+    lastPointerXRef.current = e.clientX;
+    lastPointerYRef.current = e.clientY;
+    setIsBoulderDragging(false);
+    isBoulderDraggingRef.current = false;
+
+    const dragThreshold = e.pointerType === "touch" ? 12 : 10;
+
+    const onMove = (ev: PointerEvent) => {
+      const startX = startPointerXRef.current;
+      const startY = startPointerYRef.current;
+      const lastX = lastPointerXRef.current;
+      const lastY = lastPointerYRef.current;
+      if (startX === null || startY === null || lastX === null || lastY === null) return;
+
+      const dxTotal = ev.clientX - startX;
+      const dyTotal = ev.clientY - startY;
+      const dist = Math.hypot(dxTotal, dyTotal);
+      if (dist <= dragThreshold) return;
+
+      const dx = ev.clientX - lastX;
+      const dy = ev.clientY - lastY;
+      lastPointerXRef.current = ev.clientX;
+      lastPointerYRef.current = ev.clientY;
+
+      if (!dragMovedForClickRef.current) dragMovedForClickRef.current = true;
+      if (!isBoulderDraggingRef.current) {
+        isBoulderDraggingRef.current = true;
+        setIsBoulderDragging(true);
+      }
+      const nextY = boulderRotateY.get() + dx * 0.62;
+      boulderRotateY.set(nextY);
+      boulderRotateX.set(clamp(boulderRotateX.get() - dy * 0.36, -34, 34));
+      setActiveHoldFace(getFacingFace(nextY));
+    };
+
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      lastPointerXRef.current = null;
+      lastPointerYRef.current = null;
+      startPointerXRef.current = null;
+      startPointerYRef.current = null;
+      setIsBoulderDragging(false);
+      isBoulderDraggingRef.current = false;
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+    window.addEventListener("pointercancel", onUp, { once: true });
+  }
+
 
   const FEATURE_ITEMS = useMemo(
     () =>
@@ -136,23 +300,12 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     }
   }, [quizStep, quiz, resultType, selectedQuestionIndices]);
 
-  // Boulder rotation is now drag-controlled (no auto-rotation).
-
-  const boulderRotation = useMotionValue(-10);
-  const startPointerXRef = useRef<number | null>(null);
-  const startPointerYRef = useRef<number | null>(null);
-  const lastPointerXRef = useRef<number | null>(null);
-  const lastPointerYRef = useRef<number | null>(null);
-  const dragMovedForClickRef = useRef(false);
-  const [isBoulderDragging, setIsBoulderDragging] = useState(false);
-  const isBoulderDraggingRef = useRef(false);
   const prevQuizResultTypeRef = useRef<ClimberType | null>(null);
   const [quizSurpriseNonce, setQuizSurpriseNonce] = useState(0);
   const [isFeatureBoulderInView, setIsFeatureBoulderInView] = useState(false);
   const [isQuizSurprisePending, setIsQuizSurprisePending] = useState(false);
   const [hasRevealedQuizSurprise, setHasRevealedQuizSurprise] = useState(false);
   const [isSurpriseHintOpen, setIsSurpriseHintOpen] = useState(false);
-  const [surpriseTapPulseNonce, setSurpriseTapPulseNonce] = useState(0);
   const [surpriseBoostTapCount, setSurpriseBoostTapCount] = useState(0);
   const [activeBoost, setActiveBoost] = useState<string>(CLIMB_BOOSTS[0] ?? "You got this.");
   const featureBoulderSectionRef = useRef<HTMLDivElement | null>(null);
@@ -185,12 +338,12 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     const i = order.indexOf(type);
     // Keep surprise holds on the right / lower boulder so they don’t sit on the ascending pocket route.
     const posCandidates = [
-      { left: "72%", top: "58%", rotate: "-12deg" },
-      { left: "74%", top: "44%", rotate: "10deg" },
-      { left: "68%", top: "68%", rotate: "-8deg" },
-      { left: "76%", top: "50%", rotate: "14deg" },
-      { left: "70%", top: "32%", rotate: "-10deg" },
-      { left: "64%", top: "76%", rotate: "9deg" },
+      { left: "82%", top: "68%", rotate: "-12deg" },
+      { left: "84%", top: "52%", rotate: "10deg" },
+      { left: "76%", top: "76%", rotate: "-8deg" },
+      { left: "86%", top: "38%", rotate: "14deg" },
+      { left: "78%", top: "60%", rotate: "-10deg" },
+      { left: "72%", top: "72%", rotate: "9deg" },
     ];
     const shapeCandidates = [
       "72% 28% 40% 60% / 58% 42% 70% 30%",
@@ -272,59 +425,6 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     setSurpriseTapPulseNonce((n) => n + 1);
   }
 
-  function handleBoulderPointerDown(e: ReactPointerEvent<HTMLElement>) {
-    startPointerXRef.current = e.clientX;
-    startPointerYRef.current = e.clientY;
-    dragMovedForClickRef.current = false;
-    lastPointerXRef.current = e.clientX;
-    lastPointerYRef.current = e.clientY;
-    setIsBoulderDragging(false);
-    isBoulderDraggingRef.current = false;
-
-    const dragThreshold = e.pointerType === "touch" ? 12 : 10;
-
-    const onMove = (ev: PointerEvent) => {
-      const startX = startPointerXRef.current;
-      const startY = startPointerYRef.current;
-      const lastX = lastPointerXRef.current;
-      const lastY = lastPointerYRef.current;
-      if (startX === null || startY === null || lastX === null || lastY === null) return;
-
-      const dxTotal = ev.clientX - startX;
-      const dyTotal = ev.clientY - startY;
-      const dist = Math.hypot(dxTotal, dyTotal);
-      if (dist <= dragThreshold) return;
-
-      const dx = ev.clientX - lastX;
-      const dy = ev.clientY - lastY;
-      lastPointerXRef.current = ev.clientX;
-      lastPointerYRef.current = ev.clientY;
-
-      if (!dragMovedForClickRef.current) dragMovedForClickRef.current = true;
-      if (!isBoulderDraggingRef.current) {
-        isBoulderDraggingRef.current = true;
-        setIsBoulderDragging(true);
-      }
-      boulderRotation.set(boulderRotation.get() + dx * 0.52 - dy * 0.06);
-    };
-
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-      lastPointerXRef.current = null;
-      lastPointerYRef.current = null;
-      startPointerXRef.current = null;
-      startPointerYRef.current = null;
-      setIsBoulderDragging(false);
-      isBoulderDraggingRef.current = false;
-    };
-
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
-    window.addEventListener("pointercancel", onUp, { once: true });
-  }
-
   function computeType(nextQuiz: QuizState): ClimberType | "" {
     const values = AXES.map((ax) => nextQuiz[ax.key]);
     if (values.some((v) => !v)) return "";
@@ -396,11 +496,6 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     <Layout>
       <div className="relative rounded-2xl overflow-hidden mb-8 sm:mb-12 bg-teal-950 border border-teal-900/30 shadow-[0_0_40px_rgba(0,212,170,0.05)]">
         <div className="absolute inset-0 z-0">
-          <img 
-            src={`${import.meta.env.BASE_URL}images/hero-texture.png`} 
-            alt="Rock texture" 
-            className="w-full h-full object-cover opacity-15 mix-blend-overlay"
-          />
           <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
         </div>
         
@@ -437,10 +532,10 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
         </div>
 
         <div className="overflow-visible grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 sm:gap-8 items-center">
-          <div className="flex flex-col items-center overflow-visible py-4 sm:py-6">
+          <div className="flex flex-col items-center overflow-visible py-4 sm:py-6" style={{ perspective: "900px" }}>
             <motion.div
               onPointerDownCapture={handleBoulderPointerDown}
-              style={{ rotate: boulderRotation }}
+              style={{ rotateX: boulderRotateX, rotateY: boulderRotateY, transformStyle: "preserve-3d" }}
               className={`relative w-[20rem] h-[16rem] sm:w-[24rem] sm:h-[18rem] md:w-[30rem] md:h-[22rem] touch-none select-none ${isBoulderDragging ? "cursor-grabbing" : "cursor-grab"}`}
             >
               {/* Main irregular boulder body (Fountainebleau-ish silhouette) */}
@@ -466,17 +561,43 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                     "drop-shadow(0 0 18px rgba(0,212,170,0.35)) drop-shadow(0 0 45px rgba(0,212,170,0.18))",
                 }}
               />
-              {/* Edge shading + knobbly cracks (clipped to the same silhouette) */}
-              <div
-                className="absolute inset-0 opacity-28 mix-blend-overlay pointer-events-none"
+              {/* Dynamic side faces so drag reveals different boulder sides */}
+              <motion.div
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none"
                 style={{
+                  opacity: rightFaceOpacity,
                   clipPath:
-                    "polygon(5% 24%, 16% 8%, 35% 10%, 49% 2%, 70% 8%, 86% 22%, 96% 44%, 88% 60%, 97% 76%, 80% 93%, 60% 86%, 43% 97%, 24% 87%, 8% 67%, 3% 43%)",
-                  backgroundImage:
-                    "linear-gradient(135deg, rgba(255,255,255,0.10), transparent 55%), linear-gradient(25deg, rgba(0,212,170,0.12), transparent 55%), radial-gradient(circle at 20% 20%, rgba(255,255,255,0.14), transparent 40%), radial-gradient(circle at 80% 65%, rgba(0,0,0,0.20), transparent 48%)",
+                    "polygon(70% 8%, 86% 22%, 96% 44%, 88% 60%, 97% 76%, 80% 93%, 74% 84%, 83% 70%, 76% 54%, 84% 40%, 77% 22%, 66% 14%)",
+                  transform: "translate3d(10px, 8px, -14px)",
+                  background:
+                    "linear-gradient(115deg, rgba(6,22,22,0.62) 0%, rgba(10,28,28,0.82) 55%, rgba(3,14,14,0.94) 100%)",
                 }}
               />
-
+              <motion.div
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  opacity: leftFaceOpacity,
+                  clipPath:
+                    "polygon(5% 24%, 16% 8%, 35% 10%, 28% 22%, 18% 33%, 22% 50%, 12% 64%, 20% 82%, 8% 67%, 3% 43%)",
+                  transform: "translate3d(-10px, 8px, -14px)",
+                  background:
+                    "linear-gradient(245deg, rgba(6,22,22,0.62) 0%, rgba(10,28,28,0.82) 55%, rgba(3,14,14,0.94) 100%)",
+                }}
+              />
+              <motion.div
+                aria-hidden="true"
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  opacity: topFaceOpacity,
+                  clipPath:
+                    "polygon(16% 8%, 35% 10%, 49% 2%, 70% 8%, 86% 22%, 77% 24%, 63% 19%, 49% 12%, 32% 16%, 18% 18%)",
+                  transform: "translate3d(0px, -8px, -10px)",
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 40%, rgba(0,0,0,0.26) 100%)",
+                }}
+              />
               {/* Facets / surface planes (also made less circular via clipping) */}
               <div
                 className="absolute left-[12%] top-[18%] w-[34%] h-[26%] bg-white/10 border border-white/10"
@@ -501,23 +622,38 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
               />
 
               {/* Non-tappable pockets along zigzag — varied sizes */}
-              {[
-                { left: "38%", top: "68%", w: "34px", h: "18px", r: "88% 12% 55% 45% / 40% 60% 30% 70%", rot: "-14deg", bg: "bg-black/14" },
-                { left: "42%", top: "60%", w: "22px", h: "12px", r: "90% 10% 50% 50% / 38% 62% 28% 72%", rot: "11deg", bg: "bg-primary/10" },
-                { left: "56%", top: "42%", w: "30px", h: "20px", r: "82% 18% 58% 42% / 42% 58% 32% 68%", rot: "-9deg", bg: "bg-black/14" },
-                { left: "62%", top: "34%", w: "20px", h: "11px", r: "92% 8% 48% 52% / 45% 55% 25% 75%", rot: "8deg", bg: "bg-primary/10" },
-              ].map((d, i) => (
+              {activeUpperNonFeatureHolds.map((d, i) => (
                 <span
                   key={`route-pocket-${i}`}
                   aria-hidden="true"
-                  className={`absolute z-[5] -translate-x-1/2 -translate-y-1/2 overflow-hidden pointer-events-none ${d.bg} border border-border/30 opacity-80`}
+                  className="absolute z-[5] -translate-x-1/2 -translate-y-1/2 overflow-hidden pointer-events-none border border-border/30 opacity-80"
                   style={{
                     left: d.left,
                     top: d.top,
                     width: d.w,
                     height: d.h,
                     borderRadius: d.r,
-                    transform: `rotate(${d.rot}) translate(-50%, -50%)`,
+                    transform: `rotate(${d.rot}) rotateY(${activeHoldFaceRotateY}deg) translate(-50%, -50%) translateZ(8px)`,
+                    clipPath:
+                      d.kind === "crimp"
+                        ? "polygon(2% 30%, 98% 18%, 96% 74%, 6% 88%)"
+                        : d.kind === "jug"
+                          ? "ellipse(50% 46% at 50% 50%)"
+                          : d.kind === "edge"
+                            ? "polygon(0% 38%, 100% 26%, 100% 72%, 0% 86%)"
+                            : d.kind === "pinch"
+                              ? "polygon(22% 6%, 78% 6%, 94% 36%, 84% 88%, 16% 88%, 6% 36%)"
+                              : "polygon(8% 62%, 24% 28%, 58% 18%, 88% 36%, 92% 70%, 56% 86%, 18% 82%)",
+                    background:
+                      d.kind === "crimp"
+                        ? "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(0,0,0,0.22) 100%)"
+                        : d.kind === "jug"
+                          ? "radial-gradient(circle at 45% 30%, rgba(255,255,255,0.16) 0%, rgba(0,0,0,0.20) 72%)"
+                          : d.kind === "edge"
+                            ? "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(0,0,0,0.24) 100%)"
+                            : d.kind === "pinch"
+                              ? "linear-gradient(90deg, rgba(255,255,255,0.14) 0%, rgba(0,0,0,0.24) 50%, rgba(255,255,255,0.10) 100%)"
+                              : "linear-gradient(200deg, rgba(255,255,255,0.14) 0%, rgba(0,0,0,0.22) 75%)",
                     boxShadow:
                       "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 8px 14px rgba(0,0,0,0.18)",
                   }}
@@ -525,11 +661,15 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                   <span
                     className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-95 pointer-events-none"
                     style={{
-                      width: "72%",
-                      height: "72%",
-                      borderRadius: "9999px",
+                      width: d.insetW,
+                      height: d.insetH,
+                      borderRadius: d.kind === "crimp" ? "18% 18% 40% 40% / 48% 48% 52% 52%" : "9999px",
                       background:
-                        "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 20%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0.38) 78%, rgba(0,0,0,0.48) 100%)",
+                        d.kind === "crimp"
+                          ? "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(0,0,0,0.46) 100%)"
+                          : d.kind === "edge"
+                            ? "linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(0,0,0,0.48) 100%)"
+                            : "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 20%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0.38) 78%, rgba(0,0,0,0.48) 100%)",
                       boxShadow:
                         "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -12px 22px rgba(0,0,0,0.20), inset 0 10px 16px rgba(0,212,170,0.07)",
                     }}
@@ -548,10 +688,31 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                       : { left: "68%", top: "26%", rotate: "-7deg" };
                 const pocketShell =
                   idx === 0
-                    ? { w: 56, h: 32, r: "90% 10% 55% 45% / 35% 65% 28% 72%", icon: "w-5 h-5" as const }
+                    ? {
+                        w: 56,
+                        h: 24,
+                        r: "92% 8% 58% 42% / 30% 70% 28% 72%",
+                        insetW: "68%",
+                        insetH: "68%",
+                        icon: "w-5 h-5" as const,
+                      }
                     : idx === 1
-                      ? { w: 72, h: 40, r: "88% 12% 60% 40% / 45% 55% 25% 75%", icon: "w-6 h-6" as const }
-                      : { w: 48, h: 28, r: "82% 18% 55% 45% / 40% 60% 35% 65%", icon: "w-4 h-4" as const };
+                      ? {
+                          w: 74,
+                          h: 44,
+                          r: "86% 14% 62% 38% / 44% 56% 28% 72%",
+                          insetW: "76%",
+                          insetH: "76%",
+                          icon: "w-6 h-6" as const,
+                        }
+                      : {
+                          w: 52,
+                          h: 30,
+                          r: "78% 22% 52% 48% / 46% 54% 36% 64%",
+                          insetW: "70%",
+                          insetH: "70%",
+                          icon: "w-4 h-4" as const,
+                        };
                 const ActiveIcon = f.Icon;
 
                 return (
@@ -569,30 +730,35 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                     }}
                     aria-label={f.title}
                     className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 ${isBoulderDragging ? "pointer-events-none" : ""}`}
-                    style={{ left: pos.left, top: pos.top, transform: `translate(-50%, -50%) rotate(${pos.rotate})` }}
+                    style={{
+                      left: pos.left,
+                      top: pos.top,
+                      transform: `translate(-50%, -50%) rotate(${pos.rotate}) rotateY(${activeHoldFaceRotateY}deg) translateZ(10px)`,
+                    }}
                   >
-                    <span
+                    <motion.span
                       className={`relative block overflow-hidden border transition-all ${
                         isActive
                           ? "border-primary shadow-[0_0_22px_rgba(0,212,170,0.55)]"
                           : "border-border/30"
                       }`}
                       style={{
+                        z: 10,
                         width: `${pocketShell.w}px`,
                         height: `${pocketShell.h}px`,
                         borderRadius: pocketShell.r,
                         background: isActive ? "rgba(0,212,170,0.12)" : "rgba(0,0,0,0.12)",
                         boxShadow: isActive
-                          ? "inset 0 0 0 1px rgba(255,255,255,0.12), inset 0 8px 16px rgba(0,0,0,0.22), 0 0 18px rgba(0,212,170,0.35)"
-                          : "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 8px 14px rgba(0,0,0,0.2)",
+                          ? "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 8px 14px rgba(0,0,0,0.2), 0 0 12px rgba(0,212,170,0.25)"
+                          : "inset 0 0 0 1px rgba(255,255,255,0.05), inset 0 8px 12px rgba(0,0,0,0.18)",
                       }}
                     >
                       {/* Same pocket recess as static wall holds */}
                       <span
                         className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
                         style={{
-                          width: "72%",
-                          height: "72%",
+                          width: pocketShell.insetW,
+                          height: pocketShell.insetH,
                           borderRadius: "9999px",
                           background:
                             "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 20%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0.38) 78%, rgba(0,0,0,0.48) 100%)",
@@ -600,25 +766,13 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                             "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -12px 22px rgba(0,0,0,0.20), inset 0 10px 16px rgba(0,212,170,0.07)",
                         }}
                       />
-                      {isActive && (
-                        <motion.span
-                          aria-hidden="true"
-                          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[85%] rounded-full opacity-60"
-                          style={{
-                            background:
-                              "radial-gradient(circle at 35% 30%, rgba(0,212,170,0.45) 0%, transparent 65%)",
-                          }}
-                          animate={{ opacity: [0.35, 0.85, 0.45], scale: [0.92, 1.05, 0.98] }}
-                          transition={{ duration: 0.65, ease: "easeInOut" }}
-                        />
-                      )}
                       <span className="relative z-10 flex items-center justify-center h-full w-full">
                         <ActiveIcon
                           className={`${pocketShell.icon} drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] ${isActive ? "text-primary" : "text-primary/85"}`}
                           strokeWidth={2.25}
                         />
                       </span>
-                    </span>
+                    </motion.span>
                   </button>
                 );
               })}
@@ -647,15 +801,16 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                   style={{
                     left: quizSurpriseHoldConfig.pos.left,
                     top: quizSurpriseHoldConfig.pos.top,
-                    transform: `translate(-50%, -50%) rotate(${quizSurpriseHoldConfig.pos.rotate})`,
+                    transform: `translate(-50%, -50%) rotate(${quizSurpriseHoldConfig.pos.rotate}) rotateY(${activeHoldFaceRotateY}deg) translateZ(12px)`,
                     width: `${quizSurpriseHoldConfig.w}px`,
                     height: `${quizSurpriseHoldConfig.h}px`,
                   }}
                 >
                   {/* Pocket shell only (clipped) — drill/dust live in sibling overlay */}
-                  <span
+                  <motion.span
                     className="relative z-[1] block overflow-hidden border border-border/30 transition-all"
                     style={{
+                      z: 12,
                       width: "100%",
                       height: "100%",
                       borderRadius: quizSurpriseHoldConfig.borderRadius,
@@ -722,7 +877,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                         transition={{ duration: 0.34, ease: "easeOut" }}
                       />
                     )}
-                  </span>
+                  </motion.span>
 
                   {/* Drill + dust + reveal pulse — large overflow-visible overlay (not clipped) */}
                   {hasRevealedQuizSurprise && (
@@ -746,13 +901,13 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                           {/* Drilling dust (stacked layers: chunks, fine cloud, puff rings) */}
 
                           {/* Layer 1: Heavy chalk/concrete chunks (slow, fall/roll away) */}
-                          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((i) => {
+                          {Array.from({ length: 24 }).map((_, i) => {
                             const angle = (i / 12) * Math.PI - Math.PI * 0.1;
                             const speed = 0.7 + Math.random() * 0.5;
-                            const dx = Math.cos(angle) * (20 + i * 4.5) * speed;
-                            // Gravity pull down
-                            const dy =
-                              Math.sin(angle) * (10 + i * 3.2) * speed + (14 + i * 2.3);
+                            // Keep horizontal drift modest so dust reads as "falling off" the face.
+                            const dx = Math.cos(angle) * (8 + i * 2.1) * speed;
+                            // Strong gravity pull so chunks drop down off the boulder.
+                            const dy = 20 + i * 4.2 + Math.abs(Math.sin(angle)) * 8 * speed;
                             const size = 3 + (i % 4);
                             return (
                               <motion.span
@@ -773,8 +928,8 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                                   rotate: [0, 30 * (i % 2 === 0 ? 1 : -1), 60],
                                 }}
                                 transition={{
-                                  duration: 2.3 + i * 0.2,
-                                  delay: 1.0 + i * 0.03,
+                                  duration: 3.4 + i * 0.22,
+                                  delay: 1.0 + i * 0.035,
                                   ease: "easeOut",
                                 }}
                               />
@@ -782,11 +937,12 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                           })}
 
                           {/* Layer 2: Fine chalk dust cloud (wide spread, lingers) */}
-                          {Array.from({ length: 28 }).map((_, i) => {
-                            const angle = (i / 28) * Math.PI * 2;
-                            const r = 10 + i * 1.8;
-                            const dx = Math.cos(angle) * r * (0.9 + (i % 4) * 0.25);
-                            const dy = Math.sin(angle) * r * 0.75 - 8;
+                          {Array.from({ length: 60 }).map((_, i) => {
+                            const angle = (i / 60) * Math.PI * 2;
+                            const r = 8 + i * 1.25;
+                            const dx = Math.cos(angle) * r * 0.45;
+                            // Fine dust also falls down with slight drift.
+                            const dy = 16 + i * 1.35 + Math.abs(Math.sin(angle)) * 6;
                             const size = 1.5 + (i % 3) * 0.8;
                             return (
                               <motion.span
@@ -802,13 +958,13 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                                 }}
                                 initial={{ x: 0, y: 0, opacity: 0 }}
                                 animate={{
-                                  x: [0, dx * 0.4, dx],
-                                  y: [0, dy * 0.5 - 5, dy - 10],
+                                  x: [0, dx * 0.35, dx],
+                                  y: [0, dy * 0.45, dy],
                                   opacity: [0, 0.85, 0.5, 0],
                                 }}
                                 transition={{
-                                  duration: 3.8 + (i % 4) * 0.45,
-                                  delay: 0.95 + (i % 7) * 0.07,
+                                  duration: 5.4 + (i % 6) * 0.5,
+                                  delay: 0.95 + (i % 9) * 0.06,
                                   ease: "easeOut",
                                 }}
                               />
@@ -834,28 +990,28 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                                 opacity: [0, 0.5, 0],
                               }}
                               transition={{
-                                duration: 1.8 + i * 0.45,
-                                delay: 1.0 + i * 0.2,
+                                duration: 2.6 + i * 0.5,
+                                delay: 1.0 + i * 0.24,
                                 ease: "easeOut",
                               }}
                             />
                           ))}
                       </>
 
-                      {/* Bit tip at hold centre: anchor left edge at 50%/50%, vertical centre of drill */}
+                      {/* Bit tip at hold centre; compact silhouette so nothing sticks out awkwardly */}
                       <span
                         className="pointer-events-none absolute left-1/2 top-1/2 z-[999] overflow-visible"
-                        style={{ marginTop: -20 }}
+                        style={{ marginTop: -12 }}
                       >
                         <motion.span
                           key={`quiz-surprise-drill-${quizSurpriseNonce}`}
                           aria-hidden="true"
                           className="relative block"
                           style={{
-                            width: 72,
+                            width: 84,
                             height: 40,
                             background: "transparent",
-                            transformOrigin: "2px 20px",
+                            transformOrigin: "3px 20px",
                           }}
                           initial={{ opacity: 0, scale: 0.88, rotate: 12 }}
                           animate={{
@@ -863,7 +1019,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                             rotate: [12, 4, 2, 6],
                             scale: [0.88, 1.04, 1.0, 0.96],
                           }}
-                          transition={{ duration: 7.2, ease: "easeInOut" }}
+                          transition={{ duration: 10.5, ease: "easeInOut" }}
                         >
                           {/* Drill (simplified handheld tool) */}
                           {/* Drill bit — thin pointed spike */}
@@ -874,40 +1030,40 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                               left: 0,
                               top: "50%",
                               transform: "translateY(-50%)",
-                              width: 20,
-                              height: 3,
+                              width: 28,
+                              height: 4,
                               background: "#111111",
                               clipPath: "polygon(0% 50%, 100% 0%, 100% 100%)",
                               borderRadius: 0,
                             }}
                           />
 
-                          {/* Body — chunky rounded rectangle */}
+                          {/* Body — compact rounded rectangle */}
                           <span
                             aria-hidden="true"
                             className="absolute"
                             style={{
-                              left: 18,
+                              left: 24,
                               top: "50%",
                               transform: "translateY(-50%)",
-                              width: 36,
-                              height: 14,
+                              width: 46,
+                              height: 16,
                               background: "#111111",
-                              borderRadius: "6px 10px 10px 6px",
+                              borderRadius: "8px 12px 12px 8px",
                             }}
                           />
 
-                          {/* Handle — vertical grip */}
+                          {/* Handle — shorter grip so top doesn't poke out */}
                           <span
                             aria-hidden="true"
                             className="absolute"
                             style={{
-                              left: 38,
-                              top: 10,
-                              width: 14,
-                              height: 34,
+                              left: 52,
+                              top: 11,
+                              width: 16,
+                              height: 38,
                               background: "#111111",
-                              borderRadius: "0 0 8px 8px",
+                              borderRadius: "0 0 9px 9px",
                               opacity: 0.9,
                             }}
                           />
@@ -934,22 +1090,37 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                 </button>
               )}
 
-              {[
-                { left: "28%", top: "24%", w: "32px", h: "17px", r: "90% 10% 55% 45% / 35% 65% 28% 72%", rot: "-18deg", bg: "bg-primary/10" },
-                { left: "74%", top: "22%", w: "24px", h: "13px", r: "88% 12% 60% 40% / 45% 55% 25% 75%", rot: "12deg", bg: "bg-black/14" },
-                { left: "76%", top: "62%", w: "30px", h: "16px", r: "82% 18% 55% 45% / 40% 60% 35% 65%", rot: "14deg", bg: "bg-primary/10" },
-                { left: "26%", top: "50%", w: "21px", h: "12px", r: "92% 8% 50% 50% / 40% 60% 30% 70%", rot: "-11deg", bg: "bg-black/14" },
-              ].map((d, i) => (
+              {activeLowerNonFeatureHolds.map((d, i) => (
                 <span
                   key={i}
-                  className={`absolute z-0 -translate-x-1/2 -translate-y-1/2 overflow-hidden ${d.bg} border border-border/30 opacity-75`}
+                  className="absolute z-0 -translate-x-1/2 -translate-y-1/2 overflow-hidden border border-border/30 opacity-75"
                   style={{
                     left: d.left,
                     top: d.top,
                     width: d.w,
                     height: d.h,
                     borderRadius: d.r,
-                    transform: `rotate(${d.rot}) translate(-50%, -50%)`,
+                    transform: `rotate(${d.rot}) rotateY(${activeHoldFaceRotateY}deg) translate(-50%, -50%) translateZ(8px)`,
+                    clipPath:
+                      d.kind === "crimp"
+                        ? "polygon(2% 30%, 98% 18%, 96% 74%, 6% 88%)"
+                        : d.kind === "edge"
+                            ? "polygon(0% 38%, 100% 26%, 100% 72%, 0% 86%)"
+                            : d.kind === "pocket"
+                                ? "ellipse(50% 48% at 50% 50%)"
+                                : d.kind === "sidepull"
+                                  ? "polygon(18% 2%, 80% 8%, 92% 28%, 88% 88%, 24% 98%, 10% 76%, 6% 30%)"
+                                  : "polygon(8% 62%, 24% 28%, 58% 18%, 88% 36%, 92% 70%, 56% 86%, 18% 82%)",
+                    background:
+                      d.kind === "crimp"
+                        ? "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(0,0,0,0.22) 100%)"
+                        : d.kind === "edge"
+                            ? "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(0,0,0,0.24) 100%)"
+                            : d.kind === "pocket"
+                                ? "radial-gradient(circle at 46% 30%, rgba(255,255,255,0.14) 0%, rgba(0,0,0,0.24) 76%)"
+                                : d.kind === "sidepull"
+                                  ? "linear-gradient(140deg, rgba(255,255,255,0.16) 0%, rgba(0,0,0,0.24) 72%)"
+                                  : "linear-gradient(200deg, rgba(255,255,255,0.14) 0%, rgba(0,0,0,0.22) 75%)",
                     boxShadow:
                       "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 8px 14px rgba(0,0,0,0.18)",
                   }}
@@ -958,13 +1129,23 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                   <span
                     className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-95 pointer-events-none"
                     style={{
-                      width: "72%",
-                      height: "72%",
-                      borderRadius: "9999px",
+                      width: d.insetW,
+                      height: d.insetH,
+                      borderRadius: d.kind === "crimp" ? "18% 18% 40% 40% / 48% 48% 52% 52%" : "9999px",
                       background:
-                        "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 20%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0.38) 78%, rgba(0,0,0,0.48) 100%)",
+                        d.kind === "crimp"
+                          ? "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(0,0,0,0.46) 100%)"
+                          : d.kind === "edge"
+                            ? "linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(0,0,0,0.48) 100%)"
+                            : d.kind === "pocket"
+                              ? "radial-gradient(circle at 50% 32%, rgba(255,255,255,0.22) 0%, rgba(0,0,0,0.28) 28%, rgba(0,0,0,0.56) 68%, rgba(0,0,0,0.72) 100%)"
+                          : "radial-gradient(circle at 40% 30%, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 20%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0.38) 78%, rgba(0,0,0,0.48) 100%)",
                       boxShadow:
-                        "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -12px 22px rgba(0,0,0,0.20), inset 0 10px 16px rgba(0,212,170,0.07)",
+                        d.kind === "sloper"
+                          ? "inset 0 0 0 1px rgba(255,255,255,0.08), inset 0 -8px 14px rgba(0,0,0,0.18), inset 0 6px 10px rgba(0,212,170,0.05)"
+                          : d.kind === "pocket"
+                            ? "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 -16px 22px rgba(0,0,0,0.34), inset 0 5px 8px rgba(0,212,170,0.04)"
+                          : "inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -12px 22px rgba(0,0,0,0.20), inset 0 10px 16px rgba(0,212,170,0.07)",
                     }}
                   />
                 </span>
