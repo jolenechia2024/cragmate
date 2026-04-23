@@ -112,25 +112,39 @@ export default function Beginner() {
           </div>
 
           <div className="min-w-0">
-            <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-wider mb-2 leading-snug">
+            <p className="text-xs uppercase tracking-[0.2em] text-primary/80 mb-2">Start Here</p>
+            <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-wider mb-1 leading-snug">
               Your Beginner Checklist!
             </h3>
+            <p className="text-sm text-muted-foreground">Run through these before your first session starts.</p>
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-              <div className="rounded-lg border border-border p-4 bg-background/40">
-                <div className="font-semibold text-foreground text-sm sm:text-base">1) Gear</div>
-                <div className="text-muted-foreground mt-1 text-sm sm:text-base leading-relaxed">Shoes, chalk, water, towel.</div>
+              <div className="rounded-lg border border-border/80 p-4 bg-background/35">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary text-xs font-bold">1</span>
+                  <div className="font-semibold text-foreground text-sm sm:text-base">Gear</div>
+                </div>
+                <div className="text-muted-foreground text-sm leading-relaxed">Shoes, chalk, water, towel.</div>
               </div>
-              <div className="rounded-lg border border-border p-4 bg-background/40">
-                <div className="font-semibold text-foreground text-sm sm:text-base">2) Warm up</div>
-                <div className="text-muted-foreground mt-1 text-sm sm:text-base leading-relaxed">5-10 mins easy movement.</div>
+              <div className="rounded-lg border border-border/80 p-4 bg-background/35">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary text-xs font-bold">2</span>
+                  <div className="font-semibold text-foreground text-sm sm:text-base">Warm up</div>
+                </div>
+                <div className="text-muted-foreground text-sm leading-relaxed">5-10 mins easy movement.</div>
               </div>
-              <div className="rounded-lg border border-border p-4 bg-background/40">
-                <div className="font-semibold text-foreground text-sm sm:text-base">3) Climb easy</div>
-                <div className="text-muted-foreground mt-1 text-sm sm:text-base leading-relaxed">Start with VB-V2 routes.</div>
+              <div className="rounded-lg border border-border/80 p-4 bg-background/35">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary text-xs font-bold">3</span>
+                  <div className="font-semibold text-foreground text-sm sm:text-base">Climb easy</div>
+                </div>
+                <div className="text-muted-foreground text-sm leading-relaxed">Start with VB-V2 routes.</div>
               </div>
-              <div className="rounded-lg border border-border p-4 bg-background/40">
-                <div className="font-semibold text-foreground text-sm sm:text-base">4) Cool down</div>
-                <div className="text-muted-foreground mt-1 text-sm sm:text-base leading-relaxed">Light stretch.</div>
+              <div className="rounded-lg border border-border/80 p-4 bg-background/35">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary text-xs font-bold">4</span>
+                  <div className="font-semibold text-foreground text-sm sm:text-base">Cool down</div>
+                </div>
+                <div className="text-muted-foreground text-sm leading-relaxed">Light stretch.</div>
               </div>
             </div>
 
@@ -158,26 +172,26 @@ export default function Beginner() {
           </div>
           <Accordion type="single" collapsible>
             <AccordionItem value="footwork">
-              <AccordionTrigger className="text-left">Quiet Feet First</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
+              <AccordionTrigger className="text-left text-lg sm:text-xl font-display uppercase tracking-wide">Quiet Feet First</AccordionTrigger>
+              <AccordionContent className="text-sm sm:text-base text-muted-foreground leading-relaxed pb-2">
                 Place your feet deliberately and quietly. Most beginner falls come from rushed foot placement, not weak arms.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="body-position">
-              <AccordionTrigger className="text-left">Use Hips, Not Just Arms</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
+              <AccordionTrigger className="text-left text-lg sm:text-xl font-display uppercase tracking-wide">Use Hips, Not Just Arms</AccordionTrigger>
+              <AccordionContent className="text-sm sm:text-base text-muted-foreground leading-relaxed pb-2">
                 Keep hips close to the wall, straighten arms when possible, and push from legs to reduce pump.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="resting">
-              <AccordionTrigger className="text-left">Rest Between Attempts</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
+              <AccordionTrigger className="text-left text-lg sm:text-xl font-display uppercase tracking-wide">Rest Between Attempts</AccordionTrigger>
+              <AccordionContent className="text-sm sm:text-base text-muted-foreground leading-relaxed pb-2">
                 Rest 2-3 minutes for harder tries. Quality attempts beat repeated rushed attempts.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="falling">
-              <AccordionTrigger className="text-left">Safe Falling Basics</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
+              <AccordionTrigger className="text-left text-lg sm:text-xl font-display uppercase tracking-wide">Safe Falling Basics</AccordionTrigger>
+              <AccordionContent className="text-sm sm:text-base text-muted-foreground leading-relaxed pb-2">
                 Land with bent knees, avoid reaching back with hands, and step away from the wall after landing.
               </AccordionContent>
             </AccordionItem>
@@ -192,26 +206,26 @@ export default function Beginner() {
 
           <Accordion type="single" collapsible>
             <AccordionItem value="beta">
-              <AccordionTrigger className="text-left">Beta</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
+              <AccordionTrigger className="text-left text-lg sm:text-xl font-display uppercase tracking-wide">Beta</AccordionTrigger>
+              <AccordionContent className="text-sm sm:text-base text-muted-foreground leading-relaxed pb-2">
                 Suggested sequence/method to complete a climb.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="flash">
-              <AccordionTrigger className="text-left">Flash</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
+              <AccordionTrigger className="text-left text-lg sm:text-xl font-display uppercase tracking-wide">Flash</AccordionTrigger>
+              <AccordionContent className="text-sm sm:text-base text-muted-foreground leading-relaxed pb-2">
                 Sending on your first try!
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="project">
-              <AccordionTrigger className="text-left">Project</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
+              <AccordionTrigger className="text-left text-lg sm:text-xl font-display uppercase tracking-wide">Project</AccordionTrigger>
+              <AccordionContent className="text-sm sm:text-base text-muted-foreground leading-relaxed pb-2">
                 A climb you work on over multiple attempts or sessions.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="slab-overhang">
-              <AccordionTrigger className="text-left">Slab / Overhang</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-2">
+              <AccordionTrigger className="text-left text-lg sm:text-xl font-display uppercase tracking-wide">Slab / Overhang</AccordionTrigger>
+              <AccordionContent className="text-sm sm:text-base text-muted-foreground leading-relaxed pb-2">
                 Slab leans less than vertical (balance-heavy). Overhang leans out (core + pulling heavy).
               </AccordionContent>
             </AccordionItem>

@@ -53,18 +53,13 @@
     @apply font-display tracking-wide;
   }
 
-  /* Custom Scrollbar for a gritty feel */
+  /* Hide default page scrollbar/slider for cleaner full-screen feel */
+  html, body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  ::-webkit-scrollbar-track {
-    @apply bg-teal-950/20;
-  }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-teal-900/50 rounded-full;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-teal-800/80;
+    width: 0;
+    height: 0;
   }
 }

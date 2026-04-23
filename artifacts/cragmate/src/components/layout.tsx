@@ -1,9 +1,9 @@
 import { Link, useRoute, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Mountain, Activity, NotebookPen, MapPin, Users, Menu, X, LogIn, LogOut, User as UserIcon, Inbox as InboxIcon } from "lucide-react";
+import { Mountain, Activity, NotebookPen, MapPin, Users, Menu, X, LogIn, LogOut, User as UserIcon, Inbox as InboxIcon, Hand, ChevronRight, ChevronLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getStreak } from "@/lib/streak";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { Dialog, Button, Input, Label } from "@/components/ui";
 import { useAuth } from "@/auth/AuthProvider";
 
@@ -16,10 +16,11 @@ const NAV_ITEMS = [
   { href: "/inbox", label: "Inbox", icon: InboxIcon, requiresAuth: true },
 ];
 
-function NavLink({ href, label, icon: Icon, onClick, disabled }: any) {
+function NavLink({ href, label, icon: Icon, onClick, disabled, compact = false }: any) {
   const [isActive] = useRoute(href);
   const className = cn(
     "relative flex items-center gap-3 px-4 py-3 rounded-lg font-display text-lg sm:text-xl tracking-wider transition-all duration-300 group overflow-hidden",
+    compact && "justify-center px-2 py-3",
     disabled
       ? "opacity-50 cursor-not-allowed bg-transparent text-muted-foreground"
       : isActive
@@ -39,8 +40,8 @@ function NavLink({ href, label, icon: Icon, onClick, disabled }: any) {
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary opacity-0 -translate-x-full group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
       )}
       <Icon className={cn("w-5 h-5 mb-0.5 relative z-10 transition-transform duration-300 group-hover:scale-110", isActive && "drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]")} />
-      <span className="relative z-10">{label}</span>
-      {disabled ? (
+      {!compact && <span className="relative z-10">{label}</span>}
+      {!compact && disabled ? (
         <span className="ml-auto text-[10px] uppercase tracking-widest text-muted-foreground relative z-10">
           Login
         </span>
@@ -49,11 +50,11 @@ function NavLink({ href, label, icon: Icon, onClick, disabled }: any) {
   );
 
   return disabled ? (
-    <div className={className} title="Login required">
+    <div className={className} title={disabled ? "Login required" : label}>
       {content}
     </div>
   ) : (
-    <Link href={href} onClick={onClick} className={className}>
+    <Link href={href} onClick={onClick} className={className} title={label}>
       {content}
     </Link>
   );
@@ -83,6 +84,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const username = user?.email ? user.email.split("@")[0] : "";
 
   const [streak, setStreak] = useState(() => getStreak().currentStreak);
+  const [showHandCursor, setShowHandCursor] = useState(false);
+  const [handCursorVisible, setHandCursorVisible] = useState(false);
+  const handCursorX = useMotionValue(0);
+  const handCursorY = useMotionValue(0);
+  const [desktopSidebarHovered, setDesktopSidebarHovered] = useState(false);
+  const [desktopSidebarPinnedOpen, setDesktopSidebarPinnedOpen] = useState(false);
+  const isDesktopSidebarExpanded = desktopSidebarHovered || desktopSidebarPinnedOpen;
 
   const submitAuth = async () => {
     const now = Date.now();
@@ -156,8 +164,61 @@ export function Layout({ children }: { children: React.ReactNode }) {
       window.removeEventListener("cragmate:streak-updated", onStreak as EventListener);
   }, []);
 
+  useEffect(() => {
+    const media = window.matchMedia("(pointer: fine)");
+    const sync = () => setShowHandCursor(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!showHandCursor) {
+      setHandCursorVisible(false);
+      return;
+    }
+    const onMove = (e: MouseEvent) => {
+      if (!handCursorVisible) setHandCursorVisible(true);
+      handCursorX.set(e.clientX);
+      handCursorY.set(e.clientY);
+    };
+    const onLeave = () => setHandCursorVisible(false);
+    const onEnter = () => setHandCursorVisible(true);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseleave", onLeave);
+    window.addEventListener("mouseenter", onEnter);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseleave", onLeave);
+      window.removeEventListener("mouseenter", onEnter);
+    };
+  }, [showHandCursor, handCursorVisible, handCursorX, handCursorY]);
+
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row">
+    <div className={cn("min-h-screen bg-background flex flex-col md:flex-row", showHandCursor && "md:cursor-none")}>
+      {showHandCursor && (
+        <motion.div
+          className="fixed pointer-events-none z-[60]"
+          style={{
+            left: handCursorX,
+            top: handCursorY,
+            transform: "translate(-45%, -20%)",
+          }}
+          animate={{
+            opacity: handCursorVisible ? 1 : 0,
+            scale: handCursorVisible ? 1 : 0.92,
+          }}
+          transition={{ duration: 0.08, ease: "linear" }}
+        >
+          <Hand
+            className="w-6 h-6 text-primary/95"
+            style={{
+              filter:
+                "drop-shadow(0 0 2px rgba(0,212,170,0.9)) drop-shadow(0 0 8px rgba(0,212,170,0.55)) drop-shadow(0 0 16px rgba(0,212,170,0.32))",
+            }}
+          />
+        </motion.div>
+      )}
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-3 bg-card border-b border-border sticky top-0 z-40">
         <Link href="/" className="flex items-center gap-2 text-primary">
@@ -291,14 +352,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex flex-col w-80 bg-card border-r border-border sticky top-0 h-screen p-6">
-        <Link href="/" className="flex items-center gap-3 text-primary mb-12 hover:scale-105 transition-transform origin-left drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]">
-          <Mountain className="w-10 h-10" />
-          <span className="font-display text-4xl tracking-widest mt-1">CRAGMATE</span>
+      <div
+        className={cn(
+          "hidden md:flex flex-col bg-card/95 border-r border-border sticky top-0 h-screen transition-[width,padding] duration-300",
+          isDesktopSidebarExpanded ? "w-80 p-6" : "w-20 p-4",
+        )}
+        onMouseEnter={() => setDesktopSidebarHovered(true)}
+        onMouseLeave={() => setDesktopSidebarHovered(false)}
+      >
+        <button
+          type="button"
+          onClick={() => setDesktopSidebarPinnedOpen((v) => !v)}
+          aria-label={isDesktopSidebarExpanded ? "Collapse sidebar" : "Expand sidebar"}
+          className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border border-primary/30 bg-card text-primary/90 shadow-[0_0_10px_rgba(0,212,170,0.18)] flex items-center justify-center hover:bg-primary/10 transition-colors"
+        >
+          {isDesktopSidebarExpanded ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+        </button>
+        <Link
+          href="/"
+          className={cn(
+            "flex items-center text-primary mb-10 hover:scale-105 transition-transform origin-left drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]",
+            isDesktopSidebarExpanded ? "gap-3 justify-start" : "justify-center",
+          )}
+        >
+          <Mountain className={cn("w-9 h-9", isDesktopSidebarExpanded && "w-10 h-10")} />
+          {isDesktopSidebarExpanded && <span className="font-display text-4xl tracking-widest mt-1">CRAGMATE</span>}
         </Link>
-        <div className="flex flex-col gap-2 flex-1">
+        <div className={cn("flex flex-col gap-2 flex-1", !isDesktopSidebarExpanded && "items-center")}>
           {NAV_ITEMS.map((item) => (
-            <NavLink key={item.href} {...item} disabled={item.requiresAuth && !user} />
+            <NavLink key={item.href} {...item} compact={!isDesktopSidebarExpanded} disabled={item.requiresAuth && !user} />
           ))}
         </div>
         <div className="mt-auto pt-6 border-t border-border">
@@ -307,7 +389,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span className="relative z-10">{initials}</span>
               <div className="absolute inset-0 bg-primary/20 scale-0 group-hover:scale-100 transition-transform rounded-full" />
             </div>
-            <div className="min-w-0">
+            {isDesktopSidebarExpanded && <div className="min-w-0">
               <p className="font-semibold text-foreground truncate">{displayName}</p>
               <p className="text-xs uppercase tracking-wider text-primary/80">
                 {user ? `Welcome, ${username}` : "Guest mode"}
@@ -317,9 +399,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   Streak: {streak} week{streak === 1 ? "" : "s"}
                 </p>
               ) : null}
-            </div>
+            </div>}
           </div>
 
+          {isDesktopSidebarExpanded ? (
           <div className="mt-4 flex gap-2 flex-nowrap">
             {!user ? (
               <Button
@@ -358,6 +441,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-sm">Sign Up</span>
             </Button>
           </div>
+          ) : (
+            <div className="mt-3 flex justify-center">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => {
+                  if (user) signOut();
+                  else {
+                    setAuthMode("login");
+                    setAuthOpen(true);
+                  }
+                }}
+                title={user ? "Logout" : "Login"}
+              >
+                {user ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+              </Button>
+            </div>
+          )}
           {!isConfigured && (
             <p className="mt-3 text-xs text-muted-foreground">
               Enable auth by adding <span className="font-mono">VITE_SUPABASE_URL</span> and{" "}

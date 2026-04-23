@@ -42,9 +42,11 @@ router.get("/partner-posts", async (_req, res) => {
   }
 });
 
-router.post("/partner-posts", async (req, res) => {
+router.post("/partner-posts", requireSupabaseAuth, async (req, res) => {
   try {
+    const authUserId = (req as any).authUserId as string;
     const body = CreatePartnerPostBody.parse(req.body);
+    if (body.userId !== authUserId) return res.status(403).json({ error: "Forbidden" });
     const [post] = await db
       .insert(partnerPostsTable)
       .values({
@@ -132,14 +134,16 @@ router.get("/partner-posts/:id/messages", async (req, res) => {
   }
 });
 
-router.post("/partner-posts/:id/messages", async (req, res) => {
+router.post("/partner-posts/:id/messages", requireSupabaseAuth, async (req, res) => {
   try {
+    const authUserId = (req as any).authUserId as string;
     const postId = parseInt(req.params.id);
     const { senderId, senderName, body } = req.body ?? {};
 
     if (!senderId || !senderName || !body || typeof body !== "string") {
       return res.status(400).json({ error: "Invalid message body" });
     }
+    if (senderId !== authUserId) return res.status(403).json({ error: "Forbidden" });
 
     const [msg] = await db
       .insert(partnerMessagesTable)

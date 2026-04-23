@@ -1,9 +1,10 @@
 import { Layout } from "@/components/layout";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Dialog } from "@/components/ui";
 import { CLIMB_BOOSTS } from "@/lib/climb-boosts";
 import { QUESTION_BANK } from "@/lib/quiz-bank";
 import { Link } from "wouter";
 import { ArrowRight, Compass, Mountain, TrendingUp, Users } from "lucide-react";
+import Lenis from "lenis";
 import {
   useEffect,
   useMemo,
@@ -13,7 +14,8 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { motion, useMotionValue, useTransform } from "framer-motion";
+import { motion, useMotionTemplate, useMotionValue, useTransform } from "framer-motion";
+import { useScroll } from "framer-motion";
 
 export default function Home() {
 const QUIZ_STORAGE_KEY = "cragmate_climber_quiz_v4";
@@ -96,6 +98,12 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     }
   });
   const [activeFeatureIdx, setActiveFeatureIdx] = useState(0);
+  const [contactPopupOpen, setContactPopupOpen] = useState(false);
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactTopic, setContactTopic] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [contactSubmitted, setContactSubmitted] = useState(false);
   // Boulder rotation is drag-controlled in 3D (no auto-rotation).
   const boulderRotateX = useMotionValue(8);
   const boulderRotateY = useMotionValue(-12);
@@ -108,6 +116,10 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
   const isBoulderDraggingRef = useRef(false);
   const [surpriseTapPulseNonce, setSurpriseTapPulseNonce] = useState(0);
   const [activeHoldFace, setActiveHoldFace] = useState<"front" | "right" | "back" | "left">("front");
+  const [heroPointer, setHeroPointer] = useState({ x: 0, y: 0 });
+  const [hoveredConquerLetterIdx, setHoveredConquerLetterIdx] = useState<number | null>(null);
+  const [beginnerPopupOpen, setBeginnerPopupOpen] = useState(false);
+  const heroSectionRef = useRef<HTMLDivElement | null>(null);
   const rightFaceOpacity = useTransform(boulderRotateY, (v) => {
     const s = Math.sin((v * Math.PI) / 180);
     return 0.08 + Math.max(0, s) * 0.52;
@@ -204,6 +216,23 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
   };
   const activeUpperNonFeatureHolds = nonFeatureRouteUpperByFace[activeHoldFace];
   const activeLowerNonFeatureHolds = nonFeatureRouteLowerByFace[activeHoldFace];
+  const { scrollYProgress: heroScrollProgress } = useScroll({
+    target: heroSectionRef,
+    offset: ["start start", "end start"],
+  });
+  const heroSectionOpacity = useTransform(heroScrollProgress, [0, 0.46, 0.82], [1, 1, 0]);
+  const heroSectionY = useTransform(heroScrollProgress, [0, 0.82], [0, -56]);
+  const heroSectionBlur = useTransform(heroScrollProgress, [0, 0.56, 0.82], [0, 0, 10]);
+  const heroSectionFilter = useMotionTemplate`blur(${heroSectionBlur}px)`;
+  // Crack should open progressively and not close back while scrolling down.
+  const heroCrackProgress = useTransform(heroScrollProgress, [0.03, 0.52], [0, 1]);
+  const heroCrackLeftX = useTransform(heroCrackProgress, [0, 1], [0, -260]);
+  const heroCrackRightX = useTransform(heroCrackProgress, [0, 1], [0, 260]);
+  const heroCrackLeftY = useTransform(heroCrackProgress, [0, 1], [0, -18]);
+  const heroCrackRightY = useTransform(heroCrackProgress, [0, 1], [0, 18]);
+  const heroCrackLeftRotate = useTransform(heroCrackProgress, [0, 1], [0, -3.8]);
+  const heroCrackRightRotate = useTransform(heroCrackProgress, [0, 1], [0, 3.8]);
+  const heroCrackOpacity = useTransform(heroCrackProgress, [0, 0.45, 1], [0, 0.6, 0.88]);
   function handleBoulderPointerDown(e: ReactPointerEvent<HTMLElement>) {
     startPointerXRef.current = e.clientX;
     startPointerYRef.current = e.clientY;
@@ -309,6 +338,22 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
   const [surpriseBoostTapCount, setSurpriseBoostTapCount] = useState(0);
   const [activeBoost, setActiveBoost] = useState<string>(CLIMB_BOOSTS[0] ?? "You got this.");
   const featureBoulderSectionRef = useRef<HTMLDivElement | null>(null);
+  const quizSectionRef = useRef<HTMLDivElement | null>(null);
+  const quizLoopCooldownRef = useRef(false);
+  const prevScrollYRef = useRef(0);
+  const lenisRef = useRef<Lenis | null>(null);
+  const { scrollYProgress: featureScrollProgress } = useScroll({
+    target: featureBoulderSectionRef,
+    offset: ["start end", "end start"],
+  });
+  const featureSectionOpacity = useTransform(featureScrollProgress, [0, 0.16, 0.58, 1], [0, 0.82, 1, 0]);
+  const featureSectionY = useTransform(featureScrollProgress, [0, 0.28, 1], [54, 0, -96]);
+  const { scrollYProgress: quizScrollProgress } = useScroll({
+    target: quizSectionRef,
+    offset: ["start end", "end start"],
+  });
+  const quizSectionOpacity = useTransform(quizScrollProgress, [0, 0.24, 0.8, 1], [0.08, 1, 1, 0.2]);
+  const quizSectionY = useTransform(quizScrollProgress, [0, 0.4, 1], [72, 0, -20]);
 
   function getQuizSurpriseStyle(type: ClimberType): { glow: string; border: string; bg: string } {
     const map: Record<ClimberType, { glow: string; border: string; bg: string }> = {
@@ -364,10 +409,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     return { ...style, pos, borderRadius, w, h };
   }
 
-  const quizSurpriseHoldConfig = useMemo(() => {
-    return resultType ? getQuizSurpriseHoldConfig(resultType) : null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resultType]);
+  const quizSurpriseHoldConfig = resultType ? getQuizSurpriseHoldConfig(resultType) : null;
 
   useEffect(() => {
     // Mark surprise as pending when the quiz finishes.
@@ -491,26 +533,385 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
   }, [resultType]);
 
   const currentAxis = AXES[quizStep] ?? null;
+  const brandLetters = "CRAGMATE".split("");
+  const conquerLetters = "Conquer The Crag".split("");
+  const heroDustSpecs = useMemo(
+    () =>
+      Array.from({ length: 18 }, (_, i) => ({
+        id: i,
+        left: `${4 + ((i * 17) % 92)}%`,
+        top: `${10 + ((i * 13) % 76)}%`,
+        size: 1.2 + (i % 4) * 1.1,
+        delay: (i % 8) * 0.22,
+        duration: 5.4 + (i % 7) * 0.55,
+        drift: (i % 2 === 0 ? 1 : -1) * (8 + (i % 5) * 2),
+      })),
+    [],
+  );
+
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 0.8,
+      lerp: 0.12,
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 1,
+      syncTouch: true,
+    });
+    lenisRef.current = lenis;
+    let rafId = 0;
+    const raf = (time: number) => {
+      lenis.raf(time);
+      rafId = window.requestAnimationFrame(raf);
+    };
+    rafId = window.requestAnimationFrame(raf);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      lenisRef.current = null;
+      lenis.destroy();
+    };
+  }, []);
+
+  useEffect(() => {
+    const triggerLoopToTop = () => {
+      if (quizLoopCooldownRef.current) return;
+      quizLoopCooldownRef.current = true;
+      if (lenisRef.current) {
+        lenisRef.current.scrollTo(0, { duration: 1.2 });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      window.setTimeout(() => {
+        quizLoopCooldownRef.current = false;
+      }, 1800);
+    };
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      const movingDown = currentY > prevScrollYRef.current;
+      prevScrollYRef.current = currentY;
+      if (!movingDown) return;
+      const quizEl = quizSectionRef.current;
+      if (!quizEl) return;
+      const rect = quizEl.getBoundingClientRect();
+      const hasScrolledPastQuiz = rect.bottom <= 0;
+      if (!hasScrolledPastQuiz) return;
+      triggerLoopToTop();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [quizScrollProgress]);
 
   return (
     <Layout>
-      <div className="relative rounded-2xl overflow-hidden mb-8 sm:mb-12 bg-teal-950 border border-teal-900/30 shadow-[0_0_40px_rgba(0,212,170,0.05)]">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
-        </div>
-        
-        <div className="relative z-10 p-5 sm:p-8 md:p-16 lg:p-24 flex flex-col items-center sm:items-start text-center sm:text-left max-w-3xl">
-          <Badge className="mb-6 border border-primary text-primary bg-primary/10 shadow-[0_0_10px_rgba(0,212,170,0.2)]">BETA ACCESS</Badge>
-          <h1 className="text-6xl sm:text-6xl md:text-8xl font-display uppercase leading-[0.9] sm:leading-[0.85] text-white mb-4 sm:mb-6">
-            Conquer <br/><span className="text-primary drop-shadow-[0_0_15px_rgba(0,212,170,0.4)]">The Crag</span>
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-10 max-w-xl font-medium">
+      <div className="relative">
+        <div
+          ref={heroSectionRef}
+          className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-visible"
+        >
+        <motion.section
+          style={{ opacity: heroSectionOpacity, y: heroSectionY, filter: heroSectionFilter }}
+          className="w-full min-h-[88vh] flex flex-col items-center justify-center overflow-visible"
+        >
+          <div
+            className="relative z-10 w-full max-w-[1480px] mx-auto min-h-[70vh] sm:min-h-[76vh] px-2 sm:px-8 md:px-12 lg:px-20 py-14 sm:py-18 md:py-20 flex flex-col items-center justify-center text-center overflow-visible"
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const px = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+              const py = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+              setHeroPointer((prev) => ({
+                x: prev.x * 0.82 + px * 0.18,
+                y: prev.y * 0.82 + py * 0.18,
+              }));
+            }}
+            onMouseLeave={() => setHeroPointer({ x: 0, y: 0 })}
+          >
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-[-10%] top-[10%] h-[55%]"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 20% 50%, rgba(0,212,170,0.22) 0%, rgba(0,212,170,0.06) 36%, transparent 70%), radial-gradient(ellipse at 72% 40%, rgba(34,211,238,0.20) 0%, rgba(34,211,238,0.05) 34%, transparent 70%)",
+                filter: "blur(22px)",
+                mixBlendMode: "screen",
+              }}
+              animate={{
+                x: [-34, 22, -14, 28, -34],
+                y: [0, -8, 5, -4, 0],
+                opacity: [0.2, 0.38, 0.24, 0.34, 0.2],
+                scale: [0.98, 1.03, 1],
+              }}
+              transition={{ duration: 14, ease: "easeInOut", repeat: Infinity }}
+            />
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-[-4%] bottom-[12%] h-[28%]"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.03) 32%, transparent 68%), radial-gradient(ellipse at 75% 46%, rgba(0,212,170,0.14) 0%, rgba(0,212,170,0.03) 34%, transparent 72%)",
+                filter: "blur(20px)",
+              }}
+              animate={{ x: [12, -10, 8], opacity: [0.16, 0.3, 0.2] }}
+              transition={{ duration: 8.6, ease: "easeInOut", repeat: Infinity }}
+            />
+            {heroDustSpecs.map((spec) => (
+              <motion.span
+                key={`hero-dust-${spec.id}`}
+                aria-hidden="true"
+                className="pointer-events-none absolute rounded-full"
+                style={{
+                  left: spec.left,
+                  top: spec.top,
+                  width: spec.size,
+                  height: spec.size,
+                  background: "rgba(232,245,247,0.68)",
+                  boxShadow: "0 0 10px rgba(0,212,170,0.45)",
+                  filter: "blur(0.25px)",
+                }}
+                animate={{
+                  y: [0, -14, -2, 0],
+                  x: [0, spec.drift * 0.45, spec.drift],
+                  opacity: [0.08, 0.52, 0.24, 0.08],
+                }}
+                transition={{
+                  duration: spec.duration,
+                  delay: spec.delay,
+                  ease: "easeInOut",
+                  repeat: Infinity,
+                }}
+              />
+            ))}
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-1/2 top-[56%] -translate-x-1/2 -translate-y-1/2 w-[125%] h-[34%] sm:h-[30%]"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, rgba(0,212,170,0.10) 26%, rgba(0,0,0,0.20) 60%, transparent 76%)",
+                filter: "blur(13px)",
+              }}
+              animate={{ opacity: [0.14, 0.34, 0.22], scale: [0.97, 1.04, 1] }}
+              transition={{ duration: 4.2, ease: "easeInOut", repeat: Infinity }}
+            />
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-[30%] top-[60%] w-[38%] h-[20%]"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, rgba(255,255,255,0.07) 0%, rgba(0,212,170,0.08) 32%, transparent 72%)",
+                filter: "blur(14px)",
+              }}
+              animate={{ x: [-8, 12, -4], y: [6, -5, 3], opacity: [0.1, 0.24, 0.12] }}
+              transition={{ duration: 6.2, ease: "easeInOut", repeat: Infinity }}
+            />
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[26%] top-[58%] w-[32%] h-[18%]"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, rgba(255,255,255,0.06) 0%, rgba(34,211,238,0.08) 34%, transparent 72%)",
+                filter: "blur(14px)",
+              }}
+              animate={{ x: [10, -8, 6], y: [4, -6, 2], opacity: [0.08, 0.2, 0.1] }}
+              transition={{ duration: 5.8, ease: "easeInOut", repeat: Infinity }}
+            />
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-[-8%] top-[34%] h-[46%]"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 28% 48%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 26%, transparent 62%), radial-gradient(ellipse at 66% 52%, rgba(220,245,255,0.10) 0%, rgba(220,245,255,0.03) 30%, transparent 66%)",
+                filter: "blur(18px)",
+                mixBlendMode: "screen",
+              }}
+              animate={{
+                x: [-36, 28, -12, 20, -36],
+                y: [0, -8, 6, -4, 0],
+                opacity: [0.12, 0.28, 0.16, 0.24, 0.12],
+              }}
+              transition={{ duration: 11.5, ease: "easeInOut", repeat: Infinity }}
+            />
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute left-[-4%] top-[16%] h-[68%] w-[18%]"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 20% 50%, rgba(0,212,170,0.16) 0%, rgba(0,212,170,0.06) 34%, transparent 72%)",
+                filter: "blur(24px)",
+              }}
+              animate={{ x: [-8, 6, -4], opacity: [0.2, 0.34, 0.24] }}
+              transition={{ duration: 8.4, ease: "easeInOut", repeat: Infinity }}
+            />
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute right-[-4%] top-[18%] h-[66%] w-[18%]"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 80% 50%, rgba(34,211,238,0.16) 0%, rgba(34,211,238,0.06) 34%, transparent 72%)",
+                filter: "blur(24px)",
+              }}
+              animate={{ x: [8, -6, 4], opacity: [0.18, 0.3, 0.2] }}
+              transition={{ duration: 8.9, ease: "easeInOut", repeat: Infinity }}
+            />
+            <motion.p
+              className="mb-7 text-2xl sm:text-4xl md:text-5xl uppercase tracking-[0.2em] sm:tracking-[0.24em] text-primary/95 font-bold"
+              initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ duration: 0.72, ease: "easeOut", delay: 0.08 }}
+            >
+              {brandLetters.map((ch, i) => (
+                <motion.span
+                  key={`brand-${ch}-${i}`}
+                  className="inline-block"
+                  initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+                  animate={{
+                    opacity: [0, 1, 1],
+                    y: [20, -1, 0],
+                    filter: ["blur(8px)", "blur(0px)", "blur(0px)"],
+                    textShadow: [
+                      "0 0 0 rgba(0,212,170,0)",
+                      "0 0 20px rgba(0,212,170,0.95), 0 0 48px rgba(0,212,170,0.6)",
+                      "0 0 12px rgba(0,212,170,0.5)",
+                    ],
+                  }}
+                  transition={{ duration: 0.55, ease: "easeOut", delay: 0.1 + i * 0.045 }}
+                >
+                  {ch}
+                </motion.span>
+              ))}
+            </motion.p>
+            <motion.h1
+              className="relative text-[clamp(2.22rem,10.6vw,3.72rem)] sm:text-7xl md:text-8xl lg:text-9xl xl:text-[9.25rem] 2xl:text-[10.5rem] font-display uppercase leading-[0.98] sm:leading-[0.9] tracking-[0.01em] sm:tracking-[0.03em] text-white mb-8 will-change-transform whitespace-nowrap"
+              style={{ x: heroPointer.x * 6, y: heroPointer.y * 5 }}
+              animate={{ y: [heroPointer.y * 5, heroPointer.y * 5 - 3, heroPointer.y * 5] }}
+              transition={{ duration: 6, ease: "easeInOut", repeat: Infinity }}
+              whileTap={{ scale: 0.992 }}
+            >
+              {conquerLetters.map((ch, i) => {
+                const isGlowWord = i >= 8;
+                return (
+                  <motion.span
+                    key={`conquer-${ch}-${i}`}
+                    className="relative inline-block"
+                    initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
+                    animate={{
+                      opacity: [0, 1],
+                      y: [24, -2, 0],
+                      filter: ["blur(8px)", "blur(0px)", "blur(0px)"],
+                      textShadow: isGlowWord
+                        ? [
+                            "0 0 0 rgba(0,212,170,0)",
+                            "0 0 21px rgba(0,212,170,1), 0 0 52px rgba(0,212,170,0.62)",
+                            "0 0 13px rgba(0,212,170,0.48)",
+                          ]
+                        : [
+                            "0 0 0 rgba(255,255,255,0)",
+                            "0 0 16px rgba(255,255,255,0.55)",
+                            "0 0 6px rgba(255,255,255,0.18)",
+                          ],
+                    }}
+                    transition={{ duration: 1.08, ease: "easeOut", delay: 1.2 + i * 0.07 }}
+                  >
+                    <motion.span
+                      className={`inline-block ${isGlowWord ? "text-primary" : "text-white"}`}
+                      onMouseEnter={() => {
+                        if (ch === " ") return;
+                        setHoveredConquerLetterIdx(i);
+                      }}
+                      onMouseLeave={() => {
+                        if (hoveredConquerLetterIdx === i) setHoveredConquerLetterIdx(null);
+                      }}
+                      animate={{
+                        opacity: [1, 0.72, 1, 0.82, 1, 0.9, 1],
+                        textShadow: isGlowWord
+                          ? [
+                              "0 0 10px rgba(0,212,170,0.46)",
+                              "0 0 4px rgba(0,212,170,0.2)",
+                              "0 0 18px rgba(0,212,170,0.7)",
+                              "0 0 7px rgba(0,212,170,0.3)",
+                              "0 0 15px rgba(0,212,170,0.62)",
+                              "0 0 9px rgba(0,212,170,0.36)",
+                              "0 0 12px rgba(0,212,170,0.5)",
+                            ]
+                          : [
+                              "0 0 5px rgba(255,255,255,0.15)",
+                              "0 0 1px rgba(255,255,255,0.06)",
+                              "0 0 8px rgba(255,255,255,0.26)",
+                              "0 0 2px rgba(255,255,255,0.1)",
+                              "0 0 7px rgba(255,255,255,0.22)",
+                              "0 0 3px rgba(255,255,255,0.12)",
+                              "0 0 5px rgba(255,255,255,0.15)",
+                            ],
+                      }}
+                      transition={{
+                        duration: 2.2,
+                        ease: "easeInOut",
+                        delay: 2.6 + i * 0.05,
+                        repeat: Infinity,
+                        repeatDelay: 1.1,
+                      }}
+                    >
+                      {ch === " " ? "\u00A0" : ch}
+                    </motion.span>
+                    {hoveredConquerLetterIdx === i && ch !== " " && (
+                      <span
+                        key={`conquer-letter-dust-${i}`}
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-1/2 top-[100%] -translate-x-1/2 w-[210%] h-[320px] overflow-visible"
+                      >
+                        {Array.from({ length: 18 }).map((_, p) => {
+                          const xStart = ((p % 6) - 2.5) * 6.2;
+                          const drift = ((p % 9) - 4) * 5.6;
+                          const size = 1.8 + (p % 4) * 0.8;
+                          const fall = 170 + (p % 6) * 28;
+                          const duration = 1.1 + (p % 5) * 0.2;
+                          const delay = (p % 9) * 0.13;
+                          return (
+                            <motion.span
+                              key={`conquer-letter-particle-${i}-${p}`}
+                              className="absolute left-1/2 rounded-sm"
+                              style={{
+                                top: 0,
+                                width: size,
+                                height: size * 0.74,
+                                background: "rgba(226,232,236,0.82)",
+                                filter: "blur(0.2px)",
+                              }}
+                              initial={{ x: xStart, y: 0, opacity: 0 }}
+                              animate={{
+                                x: [xStart, xStart + drift * 0.5, xStart + drift],
+                                y: [0, fall * 0.42, fall],
+                                opacity: [0, 0.95, 0.56, 0],
+                                rotate: [0, (p % 2 === 0 ? 18 : -18), 32],
+                              }}
+                              transition={{
+                                duration,
+                                delay,
+                                ease: "easeOut",
+                                repeat: Infinity,
+                                repeatDelay: 0,
+                              }}
+                            />
+                          );
+                        })}
+                      </span>
+                    )}
+                  </motion.span>
+                );
+              })}
+            </motion.h1>
+            <p className="text-sm sm:text-base md:text-lg text-muted-foreground mb-10 sm:mb-12 max-w-4xl leading-relaxed">
             The ultimate companion for climbers. Track your sessions, visualize your progress, find buddies, and convert grades with ease. 
           </p>
-          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-4 sm:gap-5">
             <Link href="/sessions" className="w-full sm:w-auto">
               <Button className="gap-2 w-full sm:w-auto min-h-9 sm:min-h-10 px-4 sm:px-6 text-sm sm:text-base">
-                Log Your Session <ArrowRight className="w-5 h-5" />
+                  Log Your Session
+                </Button>
+              </Link>
+              <Link href="/partners" className="w-full sm:w-auto">
+                <Button variant="outline" className="gap-2 w-full sm:w-auto min-h-9 sm:min-h-10 px-4 sm:px-6 text-sm sm:text-base">
+                  Find Partner
               </Button>
             </Link>
             <Link href="/gyms" className="w-full sm:w-auto">
@@ -519,24 +920,91 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
               </Button>
             </Link>
           </div>
+            <motion.div
+              className="hidden lg:block mt-14 text-[11px] text-primary/55 font-light tracking-[0.3em] uppercase pointer-events-none"
+              animate={{ opacity: [0.35, 0.95, 0.45], y: [0, 3, 0] }}
+              transition={{ duration: 1.7, ease: "easeInOut", repeat: Infinity }}
+            >
+              scroll down
+            </motion.div>
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 left-0 w-1/2 z-30"
+              style={{
+                x: heroCrackLeftX,
+                y: heroCrackLeftY,
+                rotate: heroCrackLeftRotate,
+                opacity: heroCrackOpacity,
+                clipPath:
+                  "polygon(0% 0%, 98% 0%, 90% 12%, 97% 26%, 86% 42%, 95% 58%, 84% 76%, 91% 100%, 0% 100%)",
+                background:
+                  "linear-gradient(90deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.62) 58%, rgba(0,212,170,0.18) 100%)",
+              }}
+            />
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 right-0 w-1/2 z-30"
+              style={{
+                x: heroCrackRightX,
+                y: heroCrackRightY,
+                rotate: heroCrackRightRotate,
+                opacity: heroCrackOpacity,
+                clipPath:
+                  "polygon(2% 0%, 100% 0%, 100% 100%, 9% 100%, 16% 82%, 5% 64%, 14% 46%, 3% 28%, 10% 12%)",
+                background:
+                  "linear-gradient(270deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.62) 58%, rgba(0,212,170,0.18) 100%)",
+              }}
+            />
         </div>
+        </motion.section>
       </div>
 
-      <div ref={featureBoulderSectionRef} className="overflow-visible">
-        <Card className="overflow-visible p-6 sm:p-8 border-none bg-transparent">
+      <motion.div
+        ref={featureBoulderSectionRef}
+        className="overflow-visible w-full min-h-[92vh] max-w-[min(1860px,calc(100vw-5.5rem))] mx-auto px-4 sm:px-6 md:px-10 lg:px-14 xl:px-18 2xl:px-20 flex items-center"
+        style={{ opacity: featureSectionOpacity, y: featureSectionY }}
+      >
+        <div className="relative overflow-visible w-full py-10 sm:py-12">
+        {Array.from({ length: 16 }).map((_, i) => (
+          <motion.span
+            key={`feature-bg-spec-${i}`}
+            aria-hidden="true"
+            className="pointer-events-none absolute rounded-full -z-10"
+            style={{
+              left: `${6 + ((i * 11) % 88)}%`,
+              top: `${10 + ((i * 17) % 74)}%`,
+              width: 1.5 + (i % 4) * 1.1,
+              height: 1.5 + (i % 4) * 1.1,
+              background: "rgba(220,245,245,0.55)",
+              boxShadow: "0 0 8px rgba(0,212,170,0.35)",
+              filter: "blur(0.2px)",
+            }}
+            animate={{
+              y: [0, -10 - (i % 5) * 2, 0],
+              x: [0, (i % 2 === 0 ? 6 : -6), 0],
+              opacity: [0.08, 0.42, 0.1],
+            }}
+            transition={{
+              duration: 4.8 + (i % 6) * 0.55,
+              delay: (i % 7) * 0.2,
+              ease: "easeInOut",
+              repeat: Infinity,
+            }}
+          />
+        ))}
         <div className="text-center mb-6">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Feature Boulder</p>
-          <h2 className="font-display text-2xl sm:text-3xl uppercase tracking-wider mt-2">
+          <p className="text-base sm:text-lg md:text-xl uppercase tracking-[0.22em] text-muted-foreground">Feature Boulder</p>
+          <h2 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl uppercase tracking-[0.06em] mt-2 leading-[0.95]">
             Tap a hold to view feature
           </h2>
         </div>
 
-        <div className="overflow-visible grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 sm:gap-8 items-center">
-          <div className="flex flex-col items-center overflow-visible py-4 sm:py-6" style={{ perspective: "900px" }}>
+        <div className="overflow-visible grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)] gap-6 sm:gap-8 lg:gap-28 xl:gap-32 items-center">
+          <div className="relative flex flex-col items-center lg:items-start overflow-visible py-4 sm:py-6 lg:pr-20 xl:pr-24" style={{ perspective: "900px" }}>
             <motion.div
               onPointerDownCapture={handleBoulderPointerDown}
               style={{ rotateX: boulderRotateX, rotateY: boulderRotateY, transformStyle: "preserve-3d" }}
-              className={`relative w-[20rem] h-[16rem] sm:w-[24rem] sm:h-[18rem] md:w-[30rem] md:h-[22rem] touch-none select-none ${isBoulderDragging ? "cursor-grabbing" : "cursor-grab"}`}
+              className={`relative w-[20rem] h-[16rem] sm:w-[24rem] sm:h-[18rem] md:w-[30rem] md:h-[22rem] lg:w-[20.5rem] lg:h-[16rem] xl:w-[24rem] xl:h-[18.5rem] 2xl:w-[30rem] 2xl:h-[22rem] touch-none select-none ${isBoulderDragging ? "cursor-grabbing" : "cursor-grab"}`}
             >
               {/* Main irregular boulder body (Fountainebleau-ish silhouette) */}
               {/* Outer glow — subtle breathing pulse, with larger bleed so it won't clip at edges */}
@@ -1155,10 +1623,10 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
 
           <Link
             href={FEATURE_ITEMS[activeFeatureIdx]?.href ?? "/"}
-            className="group relative block overflow-hidden rounded-xl border border-primary/20 bg-background/40 p-5 sm:p-6 text-left cursor-pointer transition-colors hover:border-primary/40 hover:bg-background/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="group relative block justify-self-stretch min-w-0 overflow-hidden w-full max-w-full lg:ml-14 xl:ml-16 rounded-xl border border-transparent bg-transparent p-5 sm:p-6 text-left cursor-pointer transition-colors hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             style={{
               boxShadow:
-                "inset 0 0 0 1px rgba(0,212,170,0.10), inset 0 0 28px rgba(0,212,170,0.12)",
+                "inset 0 0 0 1px rgba(0,212,170,0.05), inset 0 0 28px rgba(0,212,170,0.06)",
             }}
           >
             <div
@@ -1170,14 +1638,14 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
             />
             <div className="relative z-10">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Now showing</p>
-                <span className="flex items-center gap-1 text-xs font-medium text-primary opacity-90 group-hover:opacity-100 shrink-0">
+                <p className="text-xs sm:text-sm uppercase tracking-[0.22em] text-muted-foreground">Now showing</p>
+                <span className="flex items-center gap-1 text-xs sm:text-sm font-medium text-primary opacity-90 group-hover:opacity-100 shrink-0">
                   Open
                   <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
                 </span>
               </div>
               <div className="relative">
-                <h3 className="font-display text-xl sm:text-2xl uppercase tracking-wider mt-2 pr-2">
+                <h3 className="font-display text-xl sm:text-2xl md:text-3xl uppercase tracking-[0.045em] mt-2 pr-2 leading-[0.95]">
                   {FEATURE_ITEMS[activeFeatureIdx]?.title}
                 </h3>
                 <div className="absolute left-0 right-0 -bottom-1 h-[2px] bg-primary/15 rounded-full overflow-hidden">
@@ -1190,25 +1658,92 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                   />
                 </div>
               </div>
-              <p className="text-sm sm:text-base text-muted-foreground mt-2 leading-snug">
+              <p className="text-xs sm:text-sm md:text-base lg:text-sm xl:text-base text-muted-foreground mt-3 leading-relaxed max-w-4xl">
                 {FEATURE_ITEMS[activeFeatureIdx]?.desc}
               </p>
             </div>
           </Link>
         </div>
-        </Card>
+        <motion.div
+          className="hidden lg:block mt-6 text-center text-[11px] text-primary/55 font-light tracking-[0.3em] uppercase pointer-events-none"
+          animate={{ opacity: [0.35, 0.95, 0.45], y: [0, 3, 0] }}
+          transition={{ duration: 1.7, ease: "easeInOut", repeat: Infinity }}
+        >
+          scroll down
+        </motion.div>
       </div>
+      </motion.div>
 
-      <div className="mt-8">
-        <Card className="p-6 sm:p-8 border-primary/20 bg-card/60">
+      <motion.div
+        ref={quizSectionRef}
+        className="mt-8 min-h-[92vh] flex items-center w-full max-w-[1720px] mx-auto px-4 sm:px-6 md:px-10 lg:px-14 xl:px-6 2xl:px-8"
+        style={{ opacity: quizSectionOpacity, y: quizSectionY }}
+      >
+        <div className="relative w-full min-h-[78vh] py-7 sm:py-9 md:py-10 rounded-[1.4rem] sm:rounded-[1.7rem] xl:rounded-[1.1rem] border border-primary/15 bg-background/50 backdrop-blur-[2px] overflow-hidden flex items-center">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(circle at 12% 8%, rgba(0,212,170,0.18), transparent 42%), radial-gradient(circle at 88% 92%, rgba(34,211,238,0.13), transparent 46%)",
+            }}
+          />
+          <motion.div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-10 top-12 w-44 h-44 rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(0,212,170,0.24) 0%, transparent 70%)",
+              filter: "blur(18px)",
+            }}
+            animate={{ x: [0, 18, -6, 0], y: [0, -6, 4, 0], opacity: [0.28, 0.45, 0.34, 0.28] }}
+            transition={{ duration: 8.5, ease: "easeInOut", repeat: Infinity }}
+          />
+          <motion.div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-12 bottom-14 w-52 h-52 rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(34,211,238,0.2) 0%, transparent 72%)",
+              filter: "blur(18px)",
+            }}
+            animate={{ x: [0, -20, 8, 0], y: [0, 5, -6, 0], opacity: [0.2, 0.34, 0.26, 0.2] }}
+            transition={{ duration: 9.2, ease: "easeInOut", repeat: Infinity }}
+          />
+          {Array.from({ length: 14 }).map((_, i) => (
+            <motion.span
+              key={`quiz-bg-spec-${i}`}
+              aria-hidden="true"
+              className="pointer-events-none absolute rounded-full"
+              style={{
+                left: `${8 + ((i * 13) % 84)}%`,
+                top: `${12 + ((i * 19) % 72)}%`,
+                width: 1.4 + (i % 3) * 1,
+                height: 1.4 + (i % 3) * 1,
+                background: "rgba(226,242,242,0.5)",
+                boxShadow: "0 0 7px rgba(0,212,170,0.3)",
+                filter: "blur(0.2px)",
+              }}
+              animate={{
+                y: [0, -8 - (i % 4) * 2, 0],
+                x: [0, (i % 2 === 0 ? 5 : -5), 0],
+                opacity: [0.08, 0.36, 0.1],
+              }}
+              transition={{
+                duration: 4.6 + (i % 6) * 0.5,
+                delay: (i % 8) * 0.16,
+                ease: "easeInOut",
+                repeat: Infinity,
+              }}
+            />
+          ))}
+          <div className="relative z-10 w-full p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12">
+          <p className="text-base sm:text-lg md:text-xl uppercase tracking-[0.22em] text-muted-foreground">Vibe Check</p>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Mini Quiz</p>
               <h2 className="font-display text-2xl sm:text-4xl uppercase tracking-wider mt-1 leading-tight">
                 What type of climber are you?
               </h2>
               <p className="text-muted-foreground mt-3 leading-relaxed max-w-2xl">
-                Quick vibe check: answer {AXES.length} fun questions and get your Cragmate climber type.
+                Answer {AXES.length} fun questions and get your Cragmate climber type.
               </p>
             </div>
             <div className="hidden sm:block text-right">
@@ -1218,10 +1753,17 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
               </p>
             </div>
           </div>
+          <div className="mt-5 h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-primary/80 via-cyan-300/80 to-primary/70"
+              animate={{ width: `${resultType ? 100 : Math.round((Math.min(quizStep + 1, AXES.length) / AXES.length) * 100)}%` }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+            />
+          </div>
 
           {!resultType && currentAxis ? (
             <>
-              <div className="mt-6 rounded-xl border border-border bg-background/40 p-4">
+              <div className="mt-6 rounded-xl border border-primary/20 bg-black/20 p-4 sm:p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04),0_0_30px_rgba(0,212,170,0.08)]">
                 <p className="text-sm text-muted-foreground uppercase tracking-widest">
                   Question {quizStep + 1} / {AXES.length}
                 </p>
@@ -1246,7 +1788,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                         setQuizStep((s) => s + 1);
                       }
                     }}
-                    className="justify-start text-left h-auto min-h-14 py-3 px-3 sm:px-4 text-sm leading-snug whitespace-normal break-words"
+                    className="justify-start text-left h-auto min-h-14 py-3 px-3 sm:px-4 text-sm leading-snug whitespace-normal break-words border-primary/30 bg-background/70 hover:bg-primary/10 hover:border-primary/60 transition-all duration-200"
                   >
                     {currentAxis.a.label}
                   </Button>
@@ -1268,7 +1810,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                         setQuizStep((s) => s + 1);
                       }
                     }}
-                    className="justify-start text-left h-auto min-h-14 py-3 px-3 sm:px-4 text-sm leading-snug whitespace-normal break-words"
+                    className="justify-start text-left h-auto min-h-14 py-3 px-3 sm:px-4 text-sm leading-snug whitespace-normal break-words shadow-[0_0_20px_rgba(0,212,170,0.2)]"
                   >
                     {currentAxis.b.label}
                   </Button>
@@ -1294,7 +1836,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
               </div>
             </>
           ) : (
-            <div className="mt-6 rounded-xl border border-border bg-background/40 p-5">
+            <div className="mt-6 rounded-xl border border-primary/20 bg-black/20 p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04),0_0_34px_rgba(0,212,170,0.1)]">
               <p className="text-xs uppercase tracking-widest text-muted-foreground">Your result</p>
               <p className="font-display text-3xl sm:text-4xl mt-2 text-primary drop-shadow-[0_0_10px_rgba(0,212,170,0.15)] break-words">
                 The {resultType}
@@ -1322,30 +1864,95 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
               </div>
             </div>
           )}
-        </Card>
       </div>
-
-      <Card className="mt-8 p-5 sm:p-6 border-primary/20 bg-card/60">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0">
-              <Compass className="w-5 h-5 text-primary" />
             </div>
-            <div className="min-w-0">
-              <h3 className="text-xl sm:text-2xl font-display uppercase tracking-wider">First time climbing?</h3>
-              <p className="text-muted-foreground mt-2">
-                Click here for a beginner checklist + quick technique tips.
-              </p>
+      </motion.div>
+      <div className="w-full pb-8 pt-2 flex items-center justify-center">
+        <div className="inline-flex items-center gap-4 rounded-full border border-primary/20 bg-background/45 px-4 py-2 text-[10px] sm:text-xs uppercase tracking-[0.22em] text-muted-foreground/90">
+          <span>© 2025 Cragmate</span>
+          <span className="h-3 w-px bg-primary/25" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={() => {
+              setContactPopupOpen(true);
+              setContactSubmitted(false);
+            }}
+            className="text-primary/85 hover:text-primary transition-colors"
+          >
+            Contact us
+          </button>
             </div>
           </div>
+      <button
+        type="button"
+        onClick={() => setBeginnerPopupOpen(true)}
+        className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-background/85 px-4 py-2 text-xs sm:text-sm font-semibold uppercase tracking-wider text-primary shadow-[0_0_20px_rgba(0,212,170,0.18)] backdrop-blur-sm hover:bg-background transition-colors"
+      >
+        <Compass className="w-4 h-4" />
+        New to climbing ? 
+      </button>
 
-          <Link href="/beginner" className="w-full sm:w-auto">
-            <Button className="shrink-0 w-full sm:w-auto" size="lg">
-              Click here <ArrowRight className="w-5 h-5 ml-2" />
+      <Dialog open={beginnerPopupOpen} onOpenChange={setBeginnerPopupOpen} title="First time climbing?">
+        <div className="space-y-4">
+          <p className="text-muted-foreground leading-relaxed">
+            Start with the beginner checklist and quick technique tips.
+          </p>
+          <Link href="/beginner">
+            <Button className="w-full" size="lg" onClick={() => setBeginnerPopupOpen(false)}>
+              Open beginner guide <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </Link>
         </div>
-      </Card>
+      </Dialog>
+      <Dialog open={contactPopupOpen} onOpenChange={setContactPopupOpen} title="Reach out to Cragmate">
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setContactSubmitted(true);
+          }}
+        >
+          <p className="text-sm text-muted-foreground">
+            Want to collaborate, feedback, or say hi? Drop your details here.
+          </p>
+          <input
+            value={contactName}
+            onChange={(e) => setContactName(e.target.value)}
+            placeholder="Your name"
+            className="w-full rounded-md border border-primary/25 bg-background/70 px-3 py-2 text-sm outline-none focus:border-primary/60"
+          />
+          <input
+            type="email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            placeholder="Your email"
+            className="w-full rounded-md border border-primary/25 bg-background/70 px-3 py-2 text-sm outline-none focus:border-primary/60"
+          />
+          <input
+            value={contactTopic}
+            onChange={(e) => setContactTopic(e.target.value)}
+            placeholder="Topic (e.g. Collab, Sponsorship, Feedback)"
+            className="w-full rounded-md border border-primary/25 bg-background/70 px-3 py-2 text-sm outline-none focus:border-primary/60"
+          />
+          <textarea
+            value={contactMessage}
+            onChange={(e) => setContactMessage(e.target.value)}
+            placeholder="Message"
+            rows={4}
+            className="w-full rounded-md border border-primary/25 bg-background/70 px-3 py-2 text-sm outline-none focus:border-primary/60"
+          />
+          {contactSubmitted ? (
+            <p className="text-xs text-primary">Saved locally for now. We can connect this to your backend next.</p>
+          ) : null}
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" onClick={() => setContactPopupOpen(false)}>
+              Close
+            </Button>
+            <Button type="submit">Send</Button>
+          </div>
+        </form>
+      </Dialog>
+      </div>
     </Layout>
   );
 }

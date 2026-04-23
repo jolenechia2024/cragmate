@@ -37,6 +37,8 @@ type ConversationMessage = {
   createdAt: string;
 };
 
+type PublicRepliesByPost = Record<number, PartnerMessage[]>;
+
 export default function PartnerFinder() {
   const queryClient = useQueryClient();
   const { userId, user, session } = useAuth();
@@ -45,13 +47,24 @@ export default function PartnerFinder() {
   const [activePostId, setActivePostId] = useState<number | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [messageDraft, setMessageDraft] = useState("");
+  const [publicReplyDrafts, setPublicReplyDrafts] = useState<Record<number, string>>({});
   
   const { data: postsRaw, isLoading } = useListPartnerPosts();
   const posts = Array.isArray(postsRaw) ? postsRaw : [];
   const { data: gymsRaw } = useListGyms();
   const gyms = Array.isArray(gymsRaw) ? gymsRaw : [];
+  const openLogin = () => {
+    window.dispatchEvent(
+      new CustomEvent("cragmate:open-auth", {
+        detail: { mode: "login" as const },
+      }),
+    );
+  };
   
   const createMutation = useCreatePartnerPost({
+    request: {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+    },
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPartnerPostsQueryKey() });
@@ -67,6 +80,48 @@ export default function PartnerFinder() {
         queryClient.invalidateQueries({ queryKey: getListPartnerPostsQueryKey() });
       }
     }
+  });
+
+  const publicRepliesQuery = useQuery({
+    queryKey: ["partnerPublicReplies", posts.map((p) => p.id).join(",")],
+    enabled: posts.length > 0,
+    queryFn: async () => {
+      const pairs = await Promise.all(
+        posts.map(async (p) => {
+          const res = await fetch(`/api/partner-posts/${p.id}/messages`);
+          if (!res.ok) return [p.id, [] as PartnerMessage[]] as const;
+          const data = (await res.json()) as PartnerMessage[];
+          return [p.id, data] as const;
+        }),
+      );
+      return Object.fromEntries(pairs) as PublicRepliesByPost;
+    },
+  });
+
+  const sendPublicReplyMutation = useMutation({
+    mutationFn: async (vars: { postId: number; body: string }) => {
+      const res = await fetch(`/api/partner-posts/${vars.postId}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({
+          senderId: userId,
+          senderName: user?.email?.split("@")[0] ?? "Guest Climber",
+          body: vars.body,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? "Failed to send reply");
+      }
+      return (await res.json()) as PartnerMessage;
+    },
+    onSuccess: (_msg, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["partnerPublicReplies"] });
+      setPublicReplyDrafts((prev) => ({ ...prev, [vars.postId]: "" }));
+    },
   });
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<z.infer<typeof postSchema>>({
@@ -145,6 +200,10 @@ export default function PartnerFinder() {
   });
 
   const onSubmit = (data: z.infer<typeof postSchema>) => {
+    if (!user || !accessToken) {
+      openLogin();
+      return;
+    }
     createMutation.mutate({ 
       data: { 
         ...data, 
@@ -161,7 +220,17 @@ export default function PartnerFinder() {
           <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Find a Partner</h1>
           <p className="text-muted-foreground text-base sm:text-lg">Need a belay or a projecting buddy? Post here.</p>
         </div>
-        <Button size="lg" onClick={() => setIsDialogOpen(true)} className="gap-2 w-full md:w-auto">
+        <Button
+          size="lg"
+          onClick={() => {
+            if (!user) {
+              openLogin();
+              return;
+            }
+            setIsDialogOpen(true);
+          }}
+          className="gap-2 w-full md:w-auto"
+        >
           <Plus className="w-5 h-5" /> Post Session
         </Button>
       </div>
@@ -169,7 +238,7 @@ export default function PartnerFinder() {
       {!user && (
         <Card className="p-4 mb-6 border-dashed border-primary/20">
           <p className="text-sm text-muted-foreground">
-            Direct messages are <span className="text-foreground font-semibold">private</span> and require login.
+            Posting and direct messages require login so you can receive replies in <span className="text-foreground font-semibold">Inbox</span>.
             You can still browse posts in guest mode.
           </p>
         </Card>
@@ -184,7 +253,17 @@ export default function PartnerFinder() {
           <User className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
           <h3 className="text-2xl font-display uppercase mb-2">No active posts</h3>
           <p className="text-muted-foreground mb-6">Be the first to look for a partner.</p>
-          <Button onClick={() => setIsDialogOpen(true)}>Create Post</Button>
+          <Button
+            onClick={() => {
+              if (!user) {
+                openLogin();
+                return;
+              }
+              setIsDialogOpen(true);
+            }}
+          >
+            Create Post
+          </Button>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -229,13 +308,60 @@ export default function PartnerFinder() {
               {post.message && (
                 <p className="text-stone-400 italic pl-2 border-l-2 border-border mb-4">"{post.message}"</p>
               )}
+
+              <div className="rounded-lg border border-border/70 bg-card/25 p-3 space-y-2">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Public replies</p>
+                {(publicRepliesQuery.data?.[post.id]?.length ?? 0) === 0 ? (
+                  <p className="text-sm text-muted-foreground">No replies yet.</p>
+                ) : (
+                  <div className="space-y-2 max-h-36 overflow-auto pr-1">
+                    {(publicRepliesQuery.data?.[post.id] ?? []).slice(0, 6).map((m) => (
+                      <div key={m.id} className="text-sm rounded-md border border-border/60 p-2 bg-background/30">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-foreground text-xs uppercase tracking-wider">{m.senderName}</span>
+                          <span className="text-[10px] text-muted-foreground">{formatDate(m.createdAt)}</span>
+                        </div>
+                        <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{m.body}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    value={publicReplyDrafts[post.id] ?? ""}
+                    onChange={(e) =>
+                      setPublicReplyDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))
+                    }
+                    placeholder={user ? "Reply publicly..." : "Login to reply"}
+                    disabled={!user}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (!user) {
+                        openLogin();
+                        return;
+                      }
+                      const body = (publicReplyDrafts[post.id] ?? "").trim();
+                      if (!body) return;
+                      sendPublicReplyMutation.mutate({ postId: post.id, body });
+                    }}
+                    disabled={!user || sendPublicReplyMutation.isPending}
+                  >
+                    Reply
+                  </Button>
+                </div>
+              </div>
               
               <div className="mt-6">
                 <Button
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    if (!user) return;
+                    if (!user) {
+                      openLogin();
+                      return;
+                    }
                     setActivePostId(post.id);
                     setMessageDraft("");
                     conversationQuery.mutate({
@@ -246,7 +372,7 @@ export default function PartnerFinder() {
                   }}
                   disabled={!user}
                 >
-                  Message
+                  {!user ? "Login to message" : "Message"}
                 </Button>
               </div>
             </Card>
