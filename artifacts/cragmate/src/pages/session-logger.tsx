@@ -3,13 +3,13 @@ import { Card, Button, Dialog, Input, Label, Select, Textarea } from "@/componen
 import { useListSessions, useCreateSession, useListGyms, getListSessionsQueryKey } from "@workspace/api-client-react";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Calendar, Activity, Sparkles, Lightbulb, Check } from "lucide-react";
+import { Plus, Calendar, Activity, Sparkles, Check } from "lucide-react";
 import { bumpClimbingStreak, getStreak } from "@/lib/streak";
 
 const sessionSchema = z.object({
@@ -20,12 +20,12 @@ const sessionSchema = z.object({
 
 export default function SessionLogger() {
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const { userId, user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isClimbPreviewOpen, setIsClimbPreviewOpen] = useState(false);
   const [isGuestGuideOpen, setIsGuestGuideOpen] = useState(false);
-  const [sessionTemplate, setSessionTemplate] = useState("custom");
-  const [confidence, setConfidence] = useState("3");
+  const [showBeginnerSessionGuide, setShowBeginnerSessionGuide] = useState(false);
   const [previewSessionName, setPreviewSessionName] = useState<string>("Sample Gym");
   const [previewSessionDate, setPreviewSessionDate] = useState<string>(new Date().toISOString().split("T")[0]);
 
@@ -35,8 +35,9 @@ export default function SessionLogger() {
   const [previewStyle, setPreviewStyle] = useState<string>("Vertical");
   const [previewAttempts, setPreviewAttempts] = useState<number>(1);
   const [previewSent, setPreviewSent] = useState<boolean>(true);
-  const [previewNotes, setPreviewNotes] = useState<string>("Quiet feet, smooth pacing.");
+  const [previewNotes, setPreviewNotes] = useState<string>("");
   const [streak, setStreak] = useState(() => getStreak().currentStreak);
+  const [pendingSessionDayForStreak, setPendingSessionDayForStreak] = useState<string | null>(null);
 
   const [guestBestV, setGuestBestV] = useState<number>(0);
 
@@ -94,7 +95,7 @@ export default function SessionLogger() {
       id: 0,
       gymName: "Sample Gym",
       date: new Date().toISOString().split("T")[0],
-      notes: "Example session card (login to save your real logs).",
+      notes: "",
       climbCount: 8,
       topGrade: "V3",
     },
@@ -103,13 +104,17 @@ export default function SessionLogger() {
   
   const createMutation = useCreateSession({
     mutation: {
-      onSuccess: () => {
-        // Local-only streak (increments when you successfully log a session).
-        bumpClimbingStreak();
+      onSuccess: (createdSession: { id?: number } | undefined) => {
+        // Local-only streak based on submitted session date.
+        bumpClimbingStreak(pendingSessionDayForStreak ?? undefined);
         window.dispatchEvent(new CustomEvent("cragmate:streak-updated"));
         queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId }) });
         setIsDialogOpen(false);
         reset();
+        setPendingSessionDayForStreak(null);
+        if (createdSession?.id) {
+          setLocation(`/sessions/${createdSession.id}?openClimb=1`);
+        }
       }
     }
   });
@@ -121,23 +126,6 @@ export default function SessionLogger() {
     }
   });
 
-  const SESSION_TEMPLATES: Record<string, string> = {
-    custom: "",
-    beginner:
-      "Beginner template:\n- Warm-up: 10 mins easy movement\n- Goal: 6-10 climbs in VB-V2\n- Focus: quiet feet + balance\n- Cooldown: light stretch",
-    endurance:
-      "Endurance template:\n- Warm-up: 10 mins\n- 3 rounds of easier continuous climbing\n- Rest 2 mins between rounds\n- Notes: pacing + breathing",
-    project:
-      "Project template:\n- Warm-up + 2 easy benchmark climbs\n- Pick 1-2 project routes\n- 3-5 quality attempts per route\n- Record crux + beta changes",
-  };
-
-  const coachPrompt =
-    confidence === "1" || confidence === "2"
-      ? "Coach tip: If confidence is low today, drop 1 grade and focus on movement quality."
-      : confidence === "5"
-        ? "Coach tip: Confidence is high. Keep one hard challenge, but maintain good rest between tries."
-        : "Coach tip: Aim for consistent pacing and clean footwork.";
-
   const onSubmit = (data: z.infer<typeof sessionSchema>) => {
     if (!user) {
       window.dispatchEvent(
@@ -148,43 +136,51 @@ export default function SessionLogger() {
       return;
     }
 
-    const templateNotes = SESSION_TEMPLATES[sessionTemplate];
-    const mergedNotes = [templateNotes, data.notes?.trim() ? `\nPersonal notes:\n${data.notes.trim()}` : "", `\nConfidence (1-5): ${confidence}`]
-      .filter(Boolean)
-      .join("\n");
-
-    createMutation.mutate({ data: { ...data, notes: mergedNotes, userId } });
+    const userNotes = data.notes?.trim() ?? "";
+    setPendingSessionDayForStreak(data.date);
+    createMutation.mutate({ data: { ...data, notes: userNotes, userId } });
   };
 
   return (
     <Layout>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 sm:mb-8 gap-3 sm:gap-4">
         <div>
-          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Session Log</h1>
-          <p className="text-muted-foreground text-base sm:text-lg">Track your ascents and measure progress.</p>
+          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Session Log</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Track your ascents and measure progress.</p>
         </div>
-        <Button size="lg" onClick={() => setIsDialogOpen(true)} className="gap-2 w-full md:w-auto">
+        <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full md:w-auto min-h-11 sm:min-h-12">
           <Plus className="w-5 h-5" /> Log Session
         </Button>
       </div>
 
-      <Card className="mb-6 p-4 border-primary/20 bg-card/60">
-        <div className="flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-foreground">Beginner session guide</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Try VB-V2 first, keep rests long, and track confidence to spot patterns over time.
-            </p>
+      <div className="mb-3">
+        <button
+          type="button"
+          className="text-xs sm:text-sm text-muted-foreground hover:text-primary transition-colors"
+          onClick={() => setShowBeginnerSessionGuide((v) => !v)}
+        >
+          {showBeginnerSessionGuide ? "Hide beginner session guide" : "Show beginner session guide"}
+        </button>
+      </div>
+      {showBeginnerSessionGuide ? (
+        <Card className="mb-6 p-4 border-primary/20 bg-card/60">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-foreground">Beginner session guide</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Try VB-V2 first, keep rests long, and track confidence to spot patterns over time.
+              </p>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      ) : null}
 
       <Card className="mb-6 p-4 border-primary/20 bg-card/60">
         <div>
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">Weekly streak</p>
-            <p className="font-display text-2xl sm:text-3xl mt-1">
+            <p className="font-display text-xl sm:text-2xl mt-1">
               {streak} week{streak === 1 ? "" : "s"}
             </p>
             <p className="text-muted-foreground text-sm mt-1">
@@ -199,7 +195,7 @@ export default function SessionLogger() {
           {[1, 2, 3].map(i => <div key={i} className="h-48 bg-card rounded-xl animate-pulse" />)}
         </div>
       ) : displayedSessions.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-2 border-primary/20">
+        <Card className="p-8 sm:p-12 text-center border-dashed border-2 border-primary/20">
           <Activity className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
           <h3 className="text-2xl font-display uppercase mb-2">
             {isGuest ? "Preview sessions" : "No sessions yet"}
@@ -220,6 +216,8 @@ export default function SessionLogger() {
                     setPreviewSessionName(session.gymName);
                     setPreviewSessionDate(String(session.date));
                     setIsClimbPreviewOpen(true);
+                  } else {
+                    setLocation(`/sessions/${session.id}`);
                   }
                 }}
               >
@@ -250,36 +248,37 @@ export default function SessionLogger() {
                       </p>
                     </div>
                   </div>
+                  <div className="mt-4">
+                    <Button
+                      size="sm"
+                      variant={isGuest ? "outline" : "primary"}
+                      className="w-full"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (isGuest) {
+                          setPreviewSessionName(session.gymName);
+                          setPreviewSessionDate(String(session.date));
+                          setIsClimbPreviewOpen(true);
+                          return;
+                        }
+                        setLocation(`/sessions/${session.id}?openClimb=1`);
+                      }}
+                    >
+                      Log Climb
+                    </Button>
+                  </div>
                 </div>
               </Card>
             );
 
-            return isGuest ? (
-              <div key={session.id}>{CardEl}</div>
-            ) : (
-              <Link key={session.id} href={`/sessions/${session.id}`}>
-                {CardEl}
-              </Link>
-            );
+            return <div key={session.id}>{CardEl}</div>;
           })}
         </div>
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} title="Log New Session">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <Label>Session template</Label>
-            <Select value={sessionTemplate} onChange={(e) => setSessionTemplate(e.target.value)}>
-              <option value="custom">Custom</option>
-              <option value="beginner">Beginner (first sessions)</option>
-              <option value="endurance">Endurance</option>
-              <option value="project">Project day</option>
-            </Select>
-            <div className="mt-2 text-xs text-muted-foreground whitespace-pre-line">
-              {SESSION_TEMPLATES[sessionTemplate] || "Create your own structure."}
-            </div>
-          </div>
-
           <div>
             <Label>Gym</Label>
             <Select {...register("gymId")}>
@@ -299,24 +298,9 @@ export default function SessionLogger() {
           
           <div>
             <Label>Notes (Optional)</Label>
-            <Textarea placeholder="How did you feel today?" {...register("notes")} />
+            <Textarea placeholder="Write your session notes..." {...register("notes")} />
           </div>
 
-          <div>
-            <Label>Confidence (1-5)</Label>
-            <Select value={confidence} onChange={(e) => setConfidence(e.target.value)}>
-              <option value="1">1 - Very low</option>
-              <option value="2">2 - Low</option>
-              <option value="3">3 - Neutral</option>
-              <option value="4">4 - Good</option>
-              <option value="5">5 - Great</option>
-            </Select>
-            <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
-              <Lightbulb className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <span>{coachPrompt}</span>
-            </div>
-          </div>
-          
           <Button type="submit" className="w-full" disabled={createMutation.isPending}>
             {createMutation.isPending ? "Saving..." : isGuest ? "Save (login required)" : "Create Session"}
           </Button>

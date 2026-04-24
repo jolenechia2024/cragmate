@@ -33,13 +33,13 @@ export default function Inbox() {
   if (!user) {
     return (
       <Layout>
-        <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Inbox</h1>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Inbox</h1>
           <p className="text-muted-foreground text-base sm:text-lg">Your private messages.</p>
         </div>
-        <Card className="p-10 border-dashed border-primary/20 text-center">
+        <Card className="p-8 sm:p-10 border-dashed border-primary/20 text-center">
           <MessageCircle className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
-          <h3 className="text-2xl font-display uppercase mb-2">Login required</h3>
+          <h3 className="text-xl sm:text-2xl font-display uppercase mb-2">Login required</h3>
           <p className="text-muted-foreground">
             Inbox and direct messages are only available when you’re logged in.
           </p>
@@ -109,9 +109,9 @@ export default function Inbox() {
 
   return (
     <Layout>
-      <div className="flex items-end justify-between gap-4 mb-8">
+      <div className="flex items-end justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Inbox</h1>
+          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Inbox</h1>
           <p className="text-muted-foreground text-base sm:text-lg">Your private messages.</p>
         </div>
       </div>
@@ -127,9 +127,9 @@ export default function Inbox() {
           <p className="text-destructive">{(inboxQuery.error as Error).message}</p>
         </Card>
       ) : (inboxQuery.data ?? []).length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-primary/20">
+        <Card className="p-8 sm:p-12 text-center border-dashed border-primary/20">
           <MessageCircle className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
-          <h3 className="text-2xl font-display uppercase mb-2">No conversations yet</h3>
+          <h3 className="text-xl sm:text-2xl font-display uppercase mb-2">No conversations yet</h3>
           <p className="text-muted-foreground">Message someone from Partner Finder to start.</p>
         </Card>
       ) : (
@@ -138,7 +138,7 @@ export default function Inbox() {
             <Card key={c.id} className="p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="font-display uppercase tracking-wider text-lg truncate">
+                  <p className="font-display uppercase tracking-wider text-base sm:text-lg truncate">
                     {c.otherUserName}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">

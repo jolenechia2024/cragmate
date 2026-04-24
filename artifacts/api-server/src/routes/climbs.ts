@@ -52,6 +52,7 @@ router.post("/sessions/:sessionId/climbs", requireSupabaseAuth, async (req, res)
     const sessionId = parseInt(req.params.sessionId as string);
     const userId = (req as any).authUserId as string;
     const body = CreateClimbBody.parse(req.body);
+    const trimmedNotes = body.notes?.trim() ?? "";
 
     const sessionRows = await db
       .select({ id: sessionsTable.id })
@@ -69,7 +70,7 @@ router.post("/sessions/:sessionId/climbs", requireSupabaseAuth, async (req, res)
         style: body.style ?? null,
         sent: body.sent,
         attempts: body.attempts ?? 1,
-        notes: body.notes ?? null,
+        notes: trimmedNotes || null,
       })
       .returning();
 

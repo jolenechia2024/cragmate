@@ -79,14 +79,14 @@ export default function Progress() {
 
   return (
     <Layout>
-      <div className="mb-8">
-        <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Progress</h1>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Progress</h1>
         <p className="text-muted-foreground text-base sm:text-lg">
           {user ? "Your climbing journey in numbers." : "Preview your progress dashboard."}
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <Card className="p-6 flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-transform duration-300 hover:shadow-[0_0_15px_rgba(0,212,170,0.1)] hover:border-primary/30">
           <Activity className="w-8 h-8 text-primary mb-2 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Sessions</p>

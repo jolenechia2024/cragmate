@@ -109,24 +109,24 @@ export default function GymDashboard() {
 
   return (
     <Layout>
-      <div className="mb-8">
-        <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Local Gyms</h1>
-        <p className="text-muted-foreground text-base sm:text-lg">Compare passes, locations, and reset schedules.</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Local Gyms</h1>
+        <p className="text-muted-foreground text-sm sm:text-base">Compare passes, locations, and reset schedules.</p>
       </div>
 
-      <div className="flex flex-col w-full gap-3 mb-8 md:flex-row md:items-stretch md:gap-4">
+      <div className="flex flex-col w-full gap-3 mb-6 sm:mb-8 md:flex-row md:items-stretch md:gap-4">
         <div className="relative w-full md:flex-1 md:max-w-xl">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none z-10" />
           <Input
             placeholder="Search by name, location, MRT..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-12 text-lg h-14 bg-card shadow-lg border-primary/20 focus-visible:shadow-[0_0_15px_rgba(0,212,170,0.1)]"
+            className="pl-12 text-sm sm:text-base h-12 sm:h-14 bg-card shadow-lg border-primary/20 focus-visible:shadow-[0_0_15px_rgba(0,212,170,0.1)]"
           />
         </div>
         <label
           htmlFor="gym-beginner-filter"
-          className="flex w-full md:w-auto md:min-w-[280px] items-center gap-3 h-14 shrink-0 rounded-xl border border-primary/20 bg-card px-4 shadow-lg cursor-pointer select-none hover:border-primary/35 transition-colors"
+          className="flex w-full md:w-auto md:min-w-[280px] items-center gap-3 h-12 sm:h-14 shrink-0 rounded-xl border border-primary/20 bg-card px-4 shadow-lg cursor-pointer select-none hover:border-primary/35 transition-colors"
         >
           <Checkbox
             id="gym-beginner-filter"
@@ -134,7 +134,7 @@ export default function GymDashboard() {
             onCheckedChange={(v) => setBeginnerFilter(v === true)}
             className="h-5 w-5 border-primary"
           />
-          <span className="text-lg font-semibold text-foreground inline-flex items-center gap-2 leading-none">
+          <span className="text-sm sm:text-base font-semibold text-foreground inline-flex items-center gap-2 leading-none">
             <GraduationCap className="w-5 h-5 text-primary shrink-0" />
             Beginner friendly!
           </span>
@@ -176,7 +176,7 @@ export default function GymDashboard() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
-                  <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] break-words">
+                  <h3 className="text-lg sm:text-2xl font-display uppercase tracking-wider text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] break-words">
                     {group.brand}
                   </h3>
                 </div>

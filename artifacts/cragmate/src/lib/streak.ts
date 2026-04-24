@@ -13,6 +13,15 @@ function getLocalDayKey(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function normalizeDayKey(input?: string | null): string | null {
+  if (!input) return null;
+  // Accept YYYY-MM-DD directly (date input value).
+  if (/^\d{4}-\d{2}-\d{2}$/.test(input)) return input;
+  const parsed = new Date(input);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return getLocalDayKey(parsed);
+}
+
 function parseState(raw: string | null): StreakState | null {
   if (!raw) return null;
   try {
@@ -27,7 +36,22 @@ export function getStreak(): StreakState {
     return { currentStreak: 0, lastClimbedDay: "" };
   }
   const state = parseState(window.localStorage.getItem(STREAK_KEY));
-  return state ?? { currentStreak: 0, lastClimbedDay: "" };
+  const fallback = { currentStreak: 0, lastClimbedDay: "" };
+  if (!state) return fallback;
+  if (!state.lastClimbedDay) return fallback;
+
+  // If the last logged session is older than previous week, streak is broken.
+  const today = getLocalDayKey(new Date());
+  const thisWeekStart = getWeekStartDayKey(today);
+  const previousWeekStart = addDays(thisWeekStart, -7);
+  const lastWeekStart = getWeekStartDayKey(state.lastClimbedDay);
+  if (lastWeekStart !== thisWeekStart && lastWeekStart !== previousWeekStart) {
+    const reset: StreakState = { currentStreak: 0, lastClimbedDay: state.lastClimbedDay };
+    window.localStorage.setItem(STREAK_KEY, JSON.stringify(reset));
+    return reset;
+  }
+
+  return state;
 }
 
 function addDays(dayKey: string, deltaDays: number): string {
@@ -46,18 +70,18 @@ function getWeekStartDayKey(dayKey: string): string {
   return getLocalDayKey(dt);
 }
 
-export function bumpClimbingStreak(): StreakState {
+export function bumpClimbingStreak(sessionDay?: string): StreakState {
   if (typeof window === "undefined") {
     return { currentStreak: 0, lastClimbedDay: "" };
   }
 
-  const today = getLocalDayKey(new Date());
+  const dayKey = normalizeDayKey(sessionDay) ?? getLocalDayKey(new Date());
   const prev = getStreak();
 
   const prevWeekStart = prev.lastClimbedDay
     ? getWeekStartDayKey(prev.lastClimbedDay)
     : "";
-  const thisWeekStart = getWeekStartDayKey(today);
+  const thisWeekStart = getWeekStartDayKey(dayKey);
 
   // Already logged this week: don't increment.
   if (prevWeekStart === thisWeekStart) {
@@ -71,7 +95,7 @@ export function bumpClimbingStreak(): StreakState {
       ? prev.currentStreak + 1
       : 1;
 
-  const next: StreakState = { currentStreak: nextStreak, lastClimbedDay: today };
+  const next: StreakState = { currentStreak: nextStreak, lastClimbedDay: dayKey };
   window.localStorage.setItem(STREAK_KEY, JSON.stringify(next));
   return next;
 }

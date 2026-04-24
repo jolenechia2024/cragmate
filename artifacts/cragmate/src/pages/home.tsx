@@ -3,7 +3,7 @@ import { Button, Card, Dialog } from "@/components/ui";
 import { CLIMB_BOOSTS } from "@/lib/climb-boosts";
 import { QUESTION_BANK } from "@/lib/quiz-bank";
 import { Link } from "wouter";
-import { ArrowRight, Compass, Mountain, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Compass, Mountain, TrendingUp, Users, ChevronUp } from "lucide-react";
 import Lenis from "lenis";
 import {
   useEffect,
@@ -97,6 +97,17 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
       return null;
     }
   });
+  const [quizStarted, setQuizStarted] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem(QUIZ_STORAGE_KEY);
+      if (!raw) return false;
+      const p = JSON.parse(raw) as { quizStarted?: boolean; quizStep?: number; resultType?: string };
+      if (typeof p.quizStarted === "boolean") return p.quizStarted;
+      return typeof p.quizStep === "number" && p.quizStep > 0 ? true : Boolean(p.resultType);
+    } catch {
+      return false;
+    }
+  });
   const [activeFeatureIdx, setActiveFeatureIdx] = useState(0);
   const [contactPopupOpen, setContactPopupOpen] = useState(false);
   const [contactName, setContactName] = useState("");
@@ -117,6 +128,9 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
   const [surpriseTapPulseNonce, setSurpriseTapPulseNonce] = useState(0);
   const [activeHoldFace, setActiveHoldFace] = useState<"front" | "right" | "back" | "left">("front");
   const [heroPointer, setHeroPointer] = useState({ x: 0, y: 0 });
+  const [pageDustTrail, setPageDustTrail] = useState<Array<{ id: number; x: number; y: number; size: number; bornAt: number }>>([]);
+  const pageDustTrailIdRef = useRef(0);
+  const pageDustTrailLastSpawnRef = useRef(0);
   const [hoveredConquerLetterIdx, setHoveredConquerLetterIdx] = useState<number | null>(null);
   const [beginnerPopupOpen, setBeginnerPopupOpen] = useState(false);
   const heroSectionRef = useRef<HTMLDivElement | null>(null);
@@ -221,18 +235,11 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     offset: ["start start", "end start"],
   });
   const heroSectionOpacity = useTransform(heroScrollProgress, [0, 0.46, 0.82], [1, 1, 0]);
-  const heroSectionY = useTransform(heroScrollProgress, [0, 0.82], [0, -56]);
-  const heroSectionBlur = useTransform(heroScrollProgress, [0, 0.56, 0.82], [0, 0, 10]);
-  const heroSectionFilter = useMotionTemplate`blur(${heroSectionBlur}px)`;
-  // Crack should open progressively and not close back while scrolling down.
-  const heroCrackProgress = useTransform(heroScrollProgress, [0.03, 0.52], [0, 1]);
-  const heroCrackLeftX = useTransform(heroCrackProgress, [0, 1], [0, -260]);
-  const heroCrackRightX = useTransform(heroCrackProgress, [0, 1], [0, 260]);
-  const heroCrackLeftY = useTransform(heroCrackProgress, [0, 1], [0, -18]);
-  const heroCrackRightY = useTransform(heroCrackProgress, [0, 1], [0, 18]);
-  const heroCrackLeftRotate = useTransform(heroCrackProgress, [0, 1], [0, -3.8]);
-  const heroCrackRightRotate = useTransform(heroCrackProgress, [0, 1], [0, 3.8]);
-  const heroCrackOpacity = useTransform(heroCrackProgress, [0, 0.45, 1], [0, 0.6, 0.88]);
+  const heroSectionY = useTransform(heroScrollProgress, [0, 0.56], [0, -84]);
+  const heroSectionScale = useTransform(heroScrollProgress, [0, 0.2, 0.56], [1, 0.88, 0.42]);
+  const heroSectionBlur = useTransform(heroScrollProgress, [0, 0.2, 0.56], [0, 4, 18]);
+  const heroSectionBrightness = useTransform(heroScrollProgress, [0, 0.56], [1, 0.42]);
+  const heroSectionFilter = useMotionTemplate`blur(${heroSectionBlur}px) brightness(${heroSectionBrightness})`;
   function handleBoulderPointerDown(e: ReactPointerEvent<HTMLElement>) {
     startPointerXRef.current = e.clientX;
     startPointerYRef.current = e.clientY;
@@ -320,6 +327,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
       quizStep,
       quiz,
       resultType,
+      quizStarted,
       selectedQuestionIndices,
     };
     try {
@@ -327,7 +335,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     } catch {
       // ignore
     }
-  }, [quizStep, quiz, resultType, selectedQuestionIndices]);
+  }, [quizStep, quiz, resultType, quizStarted, selectedQuestionIndices]);
 
   const prevQuizResultTypeRef = useRef<ClimberType | null>(null);
   const [quizSurpriseNonce, setQuizSurpriseNonce] = useState(0);
@@ -348,12 +356,19 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
   });
   const featureSectionOpacity = useTransform(featureScrollProgress, [0, 0.16, 0.58, 1], [0, 0.82, 1, 0]);
   const featureSectionY = useTransform(featureScrollProgress, [0, 0.28, 1], [54, 0, -96]);
+  const featureSectionBlur = useTransform(featureScrollProgress, [0, 0.18, 0.62, 1], [8, 0, 0.6, 6]);
+  const featureSectionFilter = useMotionTemplate`blur(${featureSectionBlur}px)`;
   const { scrollYProgress: quizScrollProgress } = useScroll({
     target: quizSectionRef,
     offset: ["start end", "end start"],
   });
   const quizSectionOpacity = useTransform(quizScrollProgress, [0, 0.24, 0.8, 1], [0.08, 1, 1, 0.2]);
   const quizSectionY = useTransform(quizScrollProgress, [0, 0.4, 1], [72, 0, -20]);
+  const quizSectionBlur = useTransform(quizScrollProgress, [0, 0.2, 0.78, 1], [7, 0, 0.4, 5]);
+  const quizSectionFilter = useMotionTemplate`blur(${quizSectionBlur}px)`;
+  const quizGradientShiftX = useTransform(quizScrollProgress, [0, 1], [4, 92]);
+  const quizGradientOpacity = useTransform(quizScrollProgress, [0, 0.24, 0.8, 1], [0.16, 0.42, 0.55, 0.22]);
+  const quizGradientBackgroundPosition = useMotionTemplate`0% 0%, 0% 0%, ${quizGradientShiftX}% 50%`;
 
   function getQuizSurpriseStyle(type: ClimberType): { glow: string; border: string; bg: string } {
     const map: Record<ClimberType, { glow: string; border: string; bg: string }> = {
@@ -605,16 +620,49 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
 
   return (
     <Layout>
-      <div className="relative">
+      <div
+        className="relative"
+        onPointerMove={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          const now = performance.now();
+          if (now - pageDustTrailLastSpawnRef.current <= 24) return;
+          pageDustTrailLastSpawnRef.current = now;
+          const id = pageDustTrailIdRef.current++;
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const size = 2.2 + ((id % 5) * 0.7);
+          setPageDustTrail((prev) => [...prev.filter((p) => now - p.bornAt < 420), { id, x, y, size, bornAt: now }]);
+        }}
+        onPointerLeave={() => setPageDustTrail([])}
+      >
+        {pageDustTrail.map((dust) => (
+          <motion.span
+            key={`page-pointer-dust-${dust.id}`}
+            aria-hidden="true"
+            className="pointer-events-none absolute rounded-full z-[15]"
+            style={{
+              left: dust.x,
+              top: dust.y,
+              width: dust.size,
+              height: dust.size,
+              background: "rgba(238, 247, 244, 0.72)",
+              boxShadow: "0 0 10px rgba(210, 236, 232, 0.45)",
+              filter: "blur(0.2px)",
+            }}
+            initial={{ opacity: 0.55, scale: 0.6, x: -1.5, y: -1.5 }}
+            animate={{ opacity: 0, scale: 1.9, y: -12 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          />
+        ))}
         <div
           ref={heroSectionRef}
           className="relative left-1/2 right-1/2 w-screen -translate-x-1/2 overflow-visible"
         >
         <motion.section
-          style={{ opacity: heroSectionOpacity, y: heroSectionY, filter: heroSectionFilter }}
+          style={{ opacity: heroSectionOpacity, y: heroSectionY }}
           className="w-full min-h-[88vh] flex flex-col items-center justify-center overflow-visible"
         >
-          <div
+          <motion.div
             className="relative z-10 w-full max-w-[1480px] mx-auto min-h-[70vh] sm:min-h-[76vh] px-2 sm:px-8 md:px-12 lg:px-20 py-14 sm:py-18 md:py-20 flex flex-col items-center justify-center text-center overflow-visible"
             onMouseMove={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
@@ -625,7 +673,9 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                 y: prev.y * 0.82 + py * 0.18,
               }));
             }}
-            onMouseLeave={() => setHeroPointer({ x: 0, y: 0 })}
+            onMouseLeave={() => {
+              setHeroPointer({ x: 0, y: 0 });
+            }}
           >
             <motion.div
               aria-hidden="true"
@@ -753,6 +803,10 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
               animate={{ x: [8, -6, 4], opacity: [0.18, 0.3, 0.2] }}
               transition={{ duration: 8.9, ease: "easeInOut", repeat: Infinity }}
             />
+            <motion.div
+              style={{ scale: heroSectionScale, filter: heroSectionFilter, transformOrigin: "50% 50%" }}
+              className="w-full flex flex-col items-center"
+            >
             <motion.p
               className="mb-7 text-2xl sm:text-4xl md:text-5xl uppercase tracking-[0.2em] sm:tracking-[0.24em] text-primary/95 font-bold"
               initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
@@ -781,7 +835,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
               ))}
             </motion.p>
             <motion.h1
-              className="relative text-[clamp(2.22rem,10.6vw,3.72rem)] sm:text-7xl md:text-8xl lg:text-9xl xl:text-[9.25rem] 2xl:text-[10.5rem] font-display uppercase leading-[0.98] sm:leading-[0.9] tracking-[0.01em] sm:tracking-[0.03em] text-white mb-8 will-change-transform whitespace-nowrap"
+              className="relative text-[clamp(3.00rem,15.0vw,6.00rem)] sm:text-7xl md:text-8xl lg:text-9xl xl:text-[9.25rem] 2xl:text-[10.5rem] font-display uppercase leading-[0.98] sm:leading-[0.9] tracking-[0.01em] sm:tracking-[0.03em] text-white mb-8 will-change-transform whitespace-nowrap"
               style={{ x: heroPointer.x * 6, y: heroPointer.y * 5 }}
               animate={{ y: [heroPointer.y * 5, heroPointer.y * 5 - 3, heroPointer.y * 5] }}
               transition={{ duration: 6, ease: "easeInOut", repeat: Infinity }}
@@ -903,18 +957,18 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
             <p className="text-sm sm:text-base md:text-lg text-muted-foreground mb-10 sm:mb-12 max-w-4xl leading-relaxed">
             The ultimate companion for climbers. Track your sessions, visualize your progress, find buddies, and convert grades with ease. 
           </p>
-          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-4 sm:gap-5">
-            <Link href="/sessions" className="w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row w-full sm:w-auto items-center gap-4 sm:gap-5">
+            <Link href="/sessions" className="w-full max-w-[21rem] sm:w-auto">
               <Button className="gap-2 w-full sm:w-auto min-h-9 sm:min-h-10 px-4 sm:px-6 text-sm sm:text-base">
                   Log Your Session
                 </Button>
               </Link>
-              <Link href="/partners" className="w-full sm:w-auto">
+              <Link href="/partners" className="w-full max-w-[21rem] sm:w-auto">
                 <Button variant="outline" className="gap-2 w-full sm:w-auto min-h-9 sm:min-h-10 px-4 sm:px-6 text-sm sm:text-base">
                   Find Partner
               </Button>
             </Link>
-            <Link href="/gyms" className="w-full sm:w-auto">
+            <Link href="/gyms" className="w-full max-w-[21rem] sm:w-auto">
               <Button variant="outline" className="gap-2 w-full sm:w-auto min-h-9 sm:min-h-10 px-4 sm:px-6 text-sm sm:text-base">
                 Explore Gyms
               </Button>
@@ -927,44 +981,17 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
             >
               scroll down
             </motion.div>
-            <motion.div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 left-0 w-1/2 z-30"
-              style={{
-                x: heroCrackLeftX,
-                y: heroCrackLeftY,
-                rotate: heroCrackLeftRotate,
-                opacity: heroCrackOpacity,
-                clipPath:
-                  "polygon(0% 0%, 98% 0%, 90% 12%, 97% 26%, 86% 42%, 95% 58%, 84% 76%, 91% 100%, 0% 100%)",
-                background:
-                  "linear-gradient(90deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.62) 58%, rgba(0,212,170,0.18) 100%)",
-              }}
-            />
-            <motion.div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 right-0 w-1/2 z-30"
-              style={{
-                x: heroCrackRightX,
-                y: heroCrackRightY,
-                rotate: heroCrackRightRotate,
-                opacity: heroCrackOpacity,
-                clipPath:
-                  "polygon(2% 0%, 100% 0%, 100% 100%, 9% 100%, 16% 82%, 5% 64%, 14% 46%, 3% 28%, 10% 12%)",
-                background:
-                  "linear-gradient(270deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.62) 58%, rgba(0,212,170,0.18) 100%)",
-              }}
-            />
-        </div>
+            </motion.div>
+          </motion.div>
         </motion.section>
-      </div>
+        </div>
 
       <motion.div
         ref={featureBoulderSectionRef}
-        className="overflow-visible w-full min-h-[92vh] max-w-[min(1860px,calc(100vw-5.5rem))] mx-auto px-4 sm:px-6 md:px-10 lg:px-14 xl:px-18 2xl:px-20 flex items-center"
-        style={{ opacity: featureSectionOpacity, y: featureSectionY }}
+        className="overflow-visible w-full min-h-[92vh] max-w-[min(1860px,calc(100vw-0.25rem))] md:max-w-[min(1860px,calc(100vw-5.5rem))] mx-auto px-0 sm:px-6 md:px-10 lg:px-14 xl:px-18 2xl:px-20 flex items-center"
+        style={{ opacity: featureSectionOpacity, y: featureSectionY, filter: featureSectionFilter }}
       >
-        <div className="relative overflow-visible w-full py-10 sm:py-12">
+        <div className="relative overflow-visible w-full py-7 sm:py-9">
         {Array.from({ length: 16 }).map((_, i) => (
           <motion.span
             key={`feature-bg-spec-${i}`}
@@ -993,8 +1020,8 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
           />
         ))}
         <div className="text-center mb-6">
-          <p className="text-base sm:text-lg md:text-xl uppercase tracking-[0.22em] text-muted-foreground">Feature Boulder</p>
-          <h2 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl uppercase tracking-[0.06em] mt-2 leading-[0.95]">
+          <p className="text-xs sm:text-sm uppercase tracking-[0.22em] text-primary/80">Feature Boulder</p>
+          <h2 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-6xl uppercase tracking-[0.06em] mt-2 leading-[0.95]">
             Tap a hold to view feature
           </h2>
         </div>
@@ -1265,7 +1292,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                     setSurpriseBoostTapCount((n) => n + 1);
                     setIsSurpriseHintOpen(true);
                   }}
-                  className={`absolute z-20 overflow-visible -translate-x-1/2 -translate-y-1/2 ${isBoulderDragging ? "pointer-events-none" : "pointer-events-auto cursor-pointer"}`}
+                  className={`absolute z-[1200] overflow-visible -translate-x-1/2 -translate-y-1/2 ${isBoulderDragging ? "pointer-events-none" : "pointer-events-auto cursor-pointer"}`}
                   style={{
                     left: quizSurpriseHoldConfig.pos.left,
                     top: quizSurpriseHoldConfig.pos.top,
@@ -1468,18 +1495,18 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
 
                       {/* Bit tip at hold centre; compact silhouette so nothing sticks out awkwardly */}
                       <span
-                        className="pointer-events-none absolute left-1/2 top-1/2 z-[999] overflow-visible"
-                        style={{ marginTop: -12 }}
+                        className="pointer-events-none absolute left-1/2 top-1/2 z-[2000] overflow-visible"
+                        style={{ marginLeft: 6, marginTop: -40 }}
                       >
                         <motion.span
                           key={`quiz-surprise-drill-${quizSurpriseNonce}`}
                           aria-hidden="true"
                           className="relative block"
                           style={{
-                            width: 84,
-                            height: 40,
+                            width: 168,
+                            height: 80,
                             background: "transparent",
-                            transformOrigin: "3px 20px",
+                            transformOrigin: "6px 40px",
                           }}
                           initial={{ opacity: 0, scale: 0.88, rotate: 12 }}
                           animate={{
@@ -1498,8 +1525,8 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                               left: 0,
                               top: "50%",
                               transform: "translateY(-50%)",
-                              width: 28,
-                              height: 4,
+                              width: 56,
+                              height: 8,
                               background: "#111111",
                               clipPath: "polygon(0% 50%, 100% 0%, 100% 100%)",
                               borderRadius: 0,
@@ -1511,13 +1538,13 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                             aria-hidden="true"
                             className="absolute"
                             style={{
-                              left: 24,
+                              left: 48,
                               top: "50%",
                               transform: "translateY(-50%)",
-                              width: 46,
-                              height: 16,
+                              width: 92,
+                              height: 32,
                               background: "#111111",
-                              borderRadius: "8px 12px 12px 8px",
+                              borderRadius: "16px 24px 24px 16px",
                             }}
                           />
 
@@ -1526,17 +1553,39 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                             aria-hidden="true"
                             className="absolute"
                             style={{
-                              left: 52,
-                              top: 11,
-                              width: 16,
-                              height: 38,
+                              left: 104,
+                              top: 22,
+                              width: 32,
+                              height: 76,
                               background: "#111111",
-                              borderRadius: "0 0 9px 9px",
+                              borderRadius: "0 0 18px 18px",
                               opacity: 0.9,
                             }}
                           />
                         </motion.span>
                       </span>
+                      <motion.span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute left-1/2 top-1/2 z-[1900] -translate-x-1/2 -translate-y-1/2 rounded-full"
+                        style={{
+                          width: 44,
+                          height: 44,
+                          background:
+                            "radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 34%, rgba(0,212,170,0.26) 62%, rgba(34,211,238,0.14) 78%, rgba(0,0,0,0) 100%)",
+                          boxShadow:
+                            "0 0 16px rgba(0,212,170,0.38), 0 0 32px rgba(34,211,238,0.18)",
+                          filter: "blur(0.25px)",
+                        }}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: [0, 0, 0.42, 0.2, 0.42], scale: [0.9, 0.9, 1.08, 1, 1.08] }}
+                        transition={{
+                          duration: 3.2,
+                          delay: 9.8,
+                          ease: "easeInOut",
+                          repeat: Infinity,
+                          repeatDelay: 0.6,
+                        }}
+                      />
                     </span>
                   )}
 
@@ -1623,7 +1672,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
 
           <Link
             href={FEATURE_ITEMS[activeFeatureIdx]?.href ?? "/"}
-            className="group relative block justify-self-stretch min-w-0 overflow-hidden w-full max-w-full lg:ml-14 xl:ml-16 rounded-xl border border-transparent bg-transparent p-5 sm:p-6 text-left cursor-pointer transition-colors hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="group relative block justify-self-stretch min-w-0 overflow-hidden w-[calc(100%-0.75rem)] sm:w-full max-w-none mx-auto sm:mx-0 lg:ml-14 xl:ml-16 rounded-xl border border-transparent bg-transparent p-4 sm:p-6 text-left cursor-pointer transition-colors hover:bg-background/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             style={{
               boxShadow:
                 "inset 0 0 0 1px rgba(0,212,170,0.05), inset 0 0 28px rgba(0,212,170,0.06)",
@@ -1638,14 +1687,14 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
             />
             <div className="relative z-10">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-xs sm:text-sm uppercase tracking-[0.22em] text-muted-foreground">Now showing</p>
-                <span className="flex items-center gap-1 text-xs sm:text-sm font-medium text-primary opacity-90 group-hover:opacity-100 shrink-0">
+                <p className="text-sm sm:text-sm uppercase tracking-[0.22em] text-muted-foreground">Now showing</p>
+                <span className="flex items-center gap-1 text-sm sm:text-sm font-medium text-primary opacity-90 group-hover:opacity-100 shrink-0">
                   Open
                   <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
                 </span>
               </div>
               <div className="relative">
-                <h3 className="font-display text-xl sm:text-2xl md:text-3xl uppercase tracking-[0.045em] mt-2 pr-2 leading-[0.95]">
+                <h3 className="font-display text-2xl sm:text-3xl md:text-3xl uppercase tracking-[0.045em] mt-2 pr-2 leading-[0.95]">
                   {FEATURE_ITEMS[activeFeatureIdx]?.title}
                 </h3>
                 <div className="absolute left-0 right-0 -bottom-1 h-[2px] bg-primary/15 rounded-full overflow-hidden">
@@ -1658,7 +1707,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                   />
                 </div>
               </div>
-              <p className="text-xs sm:text-sm md:text-base lg:text-sm xl:text-base text-muted-foreground mt-3 leading-relaxed max-w-4xl">
+              <p className="text-sm sm:text-sm md:text-base lg:text-sm xl:text-base text-muted-foreground mt-3 leading-relaxed max-w-4xl">
                 {FEATURE_ITEMS[activeFeatureIdx]?.desc}
               </p>
             </div>
@@ -1676,98 +1725,82 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
 
       <motion.div
         ref={quizSectionRef}
-        className="mt-8 min-h-[92vh] flex items-center w-full max-w-[1720px] mx-auto px-4 sm:px-6 md:px-10 lg:px-14 xl:px-6 2xl:px-8"
-        style={{ opacity: quizSectionOpacity, y: quizSectionY }}
+        className="mt-6 sm:mt-8 relative left-1/2 w-screen -translate-x-1/2"
+        style={{ opacity: quizSectionOpacity, y: quizSectionY, filter: quizSectionFilter }}
       >
-        <div className="relative w-full min-h-[78vh] py-7 sm:py-9 md:py-10 rounded-[1.4rem] sm:rounded-[1.7rem] xl:rounded-[1.1rem] border border-primary/15 bg-background/50 backdrop-blur-[2px] overflow-hidden flex items-center">
-          <div
+        <div className="relative w-full min-h-[74vh] py-8 sm:py-10 md:py-11 overflow-visible">
+          <motion.div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0"
+            className="pointer-events-none absolute -inset-y-16 inset-x-0"
             style={{
+              opacity: quizGradientOpacity,
               background:
-                "radial-gradient(circle at 12% 8%, rgba(0,212,170,0.18), transparent 42%), radial-gradient(circle at 88% 92%, rgba(34,211,238,0.13), transparent 46%)",
+                "radial-gradient(circle at 12% 8%, rgba(0,212,170,0.1), transparent 50%), radial-gradient(circle at 88% 92%, rgba(34,211,238,0.08), transparent 54%), linear-gradient(120deg, rgba(0,212,170,0.04) 0%, rgba(34,211,238,0.02) 35%, rgba(0,212,170,0.032) 70%, rgba(34,211,238,0.016) 100%)",
+              backgroundSize: "100% 100%, 100% 100%, 180% 180%",
+              backgroundPosition: quizGradientBackgroundPosition,
+              filter: "blur(6px)",
+              maskImage: "linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)",
             }}
           />
-          <motion.div
-            aria-hidden="true"
-            className="pointer-events-none absolute -left-10 top-12 w-44 h-44 rounded-full"
-            style={{
-              background: "radial-gradient(circle, rgba(0,212,170,0.24) 0%, transparent 70%)",
-              filter: "blur(18px)",
-            }}
-            animate={{ x: [0, 18, -6, 0], y: [0, -6, 4, 0], opacity: [0.28, 0.45, 0.34, 0.28] }}
-            transition={{ duration: 8.5, ease: "easeInOut", repeat: Infinity }}
-          />
-          <motion.div
-            aria-hidden="true"
-            className="pointer-events-none absolute -right-12 bottom-14 w-52 h-52 rounded-full"
-            style={{
-              background: "radial-gradient(circle, rgba(34,211,238,0.2) 0%, transparent 72%)",
-              filter: "blur(18px)",
-            }}
-            animate={{ x: [0, -20, 8, 0], y: [0, 5, -6, 0], opacity: [0.2, 0.34, 0.26, 0.2] }}
-            transition={{ duration: 9.2, ease: "easeInOut", repeat: Infinity }}
-          />
-          {Array.from({ length: 14 }).map((_, i) => (
-            <motion.span
-              key={`quiz-bg-spec-${i}`}
-              aria-hidden="true"
-              className="pointer-events-none absolute rounded-full"
-              style={{
-                left: `${8 + ((i * 13) % 84)}%`,
-                top: `${12 + ((i * 19) % 72)}%`,
-                width: 1.4 + (i % 3) * 1,
-                height: 1.4 + (i % 3) * 1,
-                background: "rgba(226,242,242,0.5)",
-                boxShadow: "0 0 7px rgba(0,212,170,0.3)",
-                filter: "blur(0.2px)",
-              }}
-              animate={{
-                y: [0, -8 - (i % 4) * 2, 0],
-                x: [0, (i % 2 === 0 ? 5 : -5), 0],
-                opacity: [0.08, 0.36, 0.1],
-              }}
-              transition={{
-                duration: 4.6 + (i % 6) * 0.5,
-                delay: (i % 8) * 0.16,
-                ease: "easeInOut",
-                repeat: Infinity,
-              }}
-            />
-          ))}
-          <div className="relative z-10 w-full p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12">
-          <p className="text-base sm:text-lg md:text-xl uppercase tracking-[0.22em] text-muted-foreground">Vibe Check</p>
-          <div className="flex items-start justify-between gap-4">
+          <div className="relative z-10 max-w-6xl mx-auto px-5 py-3 sm:p-6 md:p-8">
+          {resultType ? (
+            <motion.div
+              className="mb-4 sm:mb-5 flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-[0.22em] text-primary/75"
+              animate={{ y: [0, -4, 0], opacity: [0.55, 1, 0.65] }}
+              transition={{ duration: 1.7, ease: "easeInOut", repeat: Infinity }}
+            >
+              <ChevronUp className="w-3.5 h-3.5" />
+              <span>Scroll up to see a surprise!</span>
+            </motion.div>
+          ) : null}
+          <p className="text-xs sm:text-sm uppercase tracking-[0.22em] text-primary/80">Vibe Check</p>
+          <div className="mt-1 flex items-start justify-between gap-4">
             <div>
-              <h2 className="font-display text-2xl sm:text-4xl uppercase tracking-wider mt-1 leading-tight">
+              <h2 className="font-display text-3xl sm:text-4xl uppercase tracking-[0.06em] mt-1 leading-[0.95]">
                 What type of climber are you?
               </h2>
-              <p className="text-muted-foreground mt-3 leading-relaxed max-w-2xl">
-                Answer {AXES.length} fun questions and get your Cragmate climber type.
+              <p className="mt-2 sm:hidden text-xs uppercase tracking-widest text-muted-foreground">
+                {resultType ? "Done" : `${quizStarted ? Math.min(quizStep + 1, AXES.length) : 0}/${AXES.length}`}
               </p>
             </div>
             <div className="hidden sm:block text-right">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Progress</p>
-              <p className="font-display text-3xl mt-1">
-                {resultType ? "Done" : `${Math.min(quizStep + 1, AXES.length)}/${AXES.length}`}
+              <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Progress</p>
+              <p className="font-display text-3xl mt-1 text-primary/90">
+                {resultType ? "Done" : `${quizStarted ? Math.min(quizStep + 1, AXES.length) : 0}/${AXES.length}`}
               </p>
             </div>
           </div>
-          <div className="mt-5 h-1.5 rounded-full bg-white/10 overflow-hidden">
+          <div className="mt-4 h-1.5 rounded-full bg-white/10 overflow-hidden">
             <motion.div
               className="h-full rounded-full bg-gradient-to-r from-primary/80 via-cyan-300/80 to-primary/70"
-              animate={{ width: `${resultType ? 100 : Math.round((Math.min(quizStep + 1, AXES.length) / AXES.length) * 100)}%` }}
+              animate={{ width: `${resultType ? 100 : quizStarted ? Math.round((Math.min(quizStep + 1, AXES.length) / AXES.length) * 100) : 0}%` }}
               transition={{ duration: 0.35, ease: "easeOut" }}
             />
           </div>
 
-          {!resultType && currentAxis ? (
+          {!resultType && !quizStarted ? (
+            <div className="mt-4 rounded-2xl border border-primary/25 bg-[linear-gradient(160deg,rgba(0,212,170,0.12),rgba(34,211,238,0.04)_48%,rgba(0,0,0,0.28))] p-5 sm:p-6 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05),0_12px_40px_rgba(0,212,170,0.08)] backdrop-blur-sm">
+              <p className="text-muted-foreground leading-relaxed max-w-2xl">
+                Answer {AXES.length} fun questions and get your Cragmate climber type.
+              </p>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setQuizStarted(true);
+                    setQuizStep(0);
+                  }}
+                  className="min-w-[148px] shadow-[0_0_24px_rgba(0,212,170,0.28)]"
+                >
+                  Start Quiz
+                </Button>
+              </div>
+            </div>
+          ) : !resultType && currentAxis ? (
             <>
-              <div className="mt-6 rounded-xl border border-primary/20 bg-black/20 p-4 sm:p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04),0_0_30px_rgba(0,212,170,0.08)]">
-                <p className="text-sm text-muted-foreground uppercase tracking-widest">
-                  Question {quizStep + 1} / {AXES.length}
-                </p>
-                <p className="font-display text-xl sm:text-2xl mt-2 leading-snug">{currentAxis.question}</p>
+              <div className="mt-4 rounded-2xl border border-primary/25 bg-[linear-gradient(165deg,rgba(0,0,0,0.3),rgba(0,212,170,0.08)_52%,rgba(0,0,0,0.24))] p-4 sm:p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05),0_10px_34px_rgba(0,212,170,0.1)] backdrop-blur-sm">
+                <p className="font-display text-xl sm:text-2xl leading-snug">{currentAxis.question}</p>
 
                 <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button
@@ -1788,7 +1821,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                         setQuizStep((s) => s + 1);
                       }
                     }}
-                    className="justify-start text-left h-auto min-h-14 py-3 px-3 sm:px-4 text-sm leading-snug whitespace-normal break-words border-primary/30 bg-background/70 hover:bg-primary/10 hover:border-primary/60 transition-all duration-200"
+                    className="justify-start text-left h-auto min-h-14 py-3.5 px-3.5 sm:px-4 text-sm leading-snug whitespace-normal break-words border-primary/35 bg-background/80 hover:bg-primary/12 hover:border-primary/70 hover:-translate-y-[1px] transition-all duration-200"
                   >
                     {currentAxis.a.label}
                   </Button>
@@ -1810,52 +1843,43 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
                         setQuizStep((s) => s + 1);
                       }
                     }}
-                    className="justify-start text-left h-auto min-h-14 py-3 px-3 sm:px-4 text-sm leading-snug whitespace-normal break-words shadow-[0_0_20px_rgba(0,212,170,0.2)]"
+                    className="justify-start text-left h-auto min-h-14 py-3.5 px-3.5 sm:px-4 text-sm leading-snug whitespace-normal break-words shadow-[0_0_24px_rgba(0,212,170,0.24)] hover:-translate-y-[1px] transition-transform duration-200"
                   >
                     {currentAxis.b.label}
                   </Button>
                 </div>
-              </div>
-
-              <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                <p className="text-xs text-muted-foreground">
-                  Already know your vibe? You can retake anytime.
-                </p>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setSelectedQuestionIndices(shuffleAndPickN(QUIZ_QUESTION_BANK.length, QUIZ_LENGTH));
-                    setQuizStep(0);
-                    setQuiz({});
-                    setResultType(null);
-                    window.localStorage.removeItem(QUIZ_STORAGE_KEY);
-                  }}
-                >
-                  Retake
-                </Button>
+                <div className="mt-4 flex justify-start">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      if (quizStep <= 0) return;
+                      setQuizStep((s) => Math.max(0, s - 1));
+                    }}
+                    disabled={quizStep <= 0}
+                  >
+                    Back
+                  </Button>
+                </div>
               </div>
             </>
           ) : (
-            <div className="mt-6 rounded-xl border border-primary/20 bg-black/20 p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04),0_0_34px_rgba(0,212,170,0.1)]">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Your result</p>
+            <div className="mt-4 rounded-2xl border border-primary/25 bg-[linear-gradient(165deg,rgba(0,212,170,0.1),rgba(34,211,238,0.08)_45%,rgba(0,0,0,0.25))] p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05),0_12px_36px_rgba(0,212,170,0.12)] backdrop-blur-sm">
+              <p className="inline-flex rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.2em] text-primary/90">Your result</p>
               <p className="font-display text-3xl sm:text-4xl mt-2 text-primary drop-shadow-[0_0_10px_rgba(0,212,170,0.15)] break-words">
                 The {resultType}
               </p>
               {resultBlurb ? (
                 <p className="text-muted-foreground mt-3 leading-relaxed text-sm sm:text-base">{resultBlurb}</p>
               ) : null}
-              <p className="text-sm sm:text-base text-muted-foreground mt-3">
-                Check the boulder to see a surprise.
-              </p>
-
               <div className="mt-5">
-                <Button
+                 <Button
                   variant="ghost"
                   onClick={() => {
                     setSelectedQuestionIndices(shuffleAndPickN(QUIZ_QUESTION_BANK.length, QUIZ_LENGTH));
                     setQuizStep(0);
                     setQuiz({});
                     setResultType(null);
+                    setQuizStarted(false);
                     window.localStorage.removeItem(QUIZ_STORAGE_KEY);
                   }}
                 >
@@ -1867,22 +1891,6 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
       </div>
             </div>
       </motion.div>
-      <div className="w-full pb-8 pt-2 flex items-center justify-center">
-        <div className="inline-flex items-center gap-4 rounded-full border border-primary/20 bg-background/45 px-4 py-2 text-[10px] sm:text-xs uppercase tracking-[0.22em] text-muted-foreground/90">
-          <span>© 2025 Cragmate</span>
-          <span className="h-3 w-px bg-primary/25" aria-hidden="true" />
-          <button
-            type="button"
-            onClick={() => {
-              setContactPopupOpen(true);
-              setContactSubmitted(false);
-            }}
-            className="text-primary/85 hover:text-primary transition-colors"
-          >
-            Contact us
-          </button>
-            </div>
-          </div>
       <button
         type="button"
         onClick={() => setBeginnerPopupOpen(true)}

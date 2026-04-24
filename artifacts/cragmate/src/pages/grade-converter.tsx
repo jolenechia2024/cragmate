@@ -275,8 +275,8 @@ export default function GradeConverter() {
 
   return (
     <Layout>
-      <div className="mb-8">
-        <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Grade Converter</h1>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Grade Converter</h1>
         <p className="text-muted-foreground text-base sm:text-lg">
           Convert V-scale to local gym grading systems.
         </p>
@@ -290,8 +290,8 @@ export default function GradeConverter() {
               placeholder="Search by V (e.g. V4) or gym grade..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-14 pl-12 text-base sm:text-lg bg-background"
-            />
+              className="pl-10 text-sm sm:text-base h-12 sm:h-14 bg-card shadow-lg border-primary/20 focus-visible:shadow-[0_0_15px_rgba(0,212,170,0.1)]"
+              />
           </div>
 
           <div className="relative">
@@ -399,7 +399,7 @@ export default function GradeConverter() {
               </div>
             ))}
             {filteredGrades.length === 0 && (
-              <div className="p-12 text-center text-muted-foreground">No matching grades found.</div>
+              <div className="p-8 sm:p-12 text-center text-muted-foreground">No matching grades found.</div>
             )}
           </div>
         </div>
@@ -448,7 +448,7 @@ export default function GradeConverter() {
           })}
 
           {filteredGrades.length === 0 && (
-            <div className="p-10 text-center text-muted-foreground">No matching grades found.</div>
+            <div className="p-8 sm:p-10 text-center text-muted-foreground">No matching grades found.</div>
           )}
         </div>
       </div>

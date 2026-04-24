@@ -2,7 +2,7 @@ import { Layout } from "@/components/layout";
 import { Card, Button } from "@/components/ui";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link } from "wouter";
-import { ArrowLeft, BookOpen, Compass, Shield } from "lucide-react";
+import { BookOpen, Compass, Shield } from "lucide-react";
 import { useState } from "react";
 
 type HoldType = {
@@ -93,14 +93,7 @@ export default function Beginner() {
   return (
     <Layout>
       <div className="mb-6">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-primary hover:underline font-semibold uppercase tracking-wider text-sm mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Home
-        </Link>
-
-        <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2 leading-tight">
+        <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2 leading-tight">
           For the First Timers
         </h1>
       </div>

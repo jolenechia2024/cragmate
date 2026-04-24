@@ -1,6 +1,6 @@
 import { Link, useRoute, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Mountain, Activity, NotebookPen, MapPin, Users, Menu, X, LogIn, LogOut, User as UserIcon, Inbox as InboxIcon, Hand, ChevronRight, ChevronLeft } from "lucide-react";
+import { Mountain, Activity, NotebookPen, MapPin, Users, Menu, X, LogIn, LogOut, User as UserIcon, Inbox as InboxIcon, Hand, ChevronRight, ChevronLeft, House, ArrowLeft, BookOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getStreak } from "@/lib/streak";
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
@@ -10,16 +10,17 @@ import { useAuth } from "@/auth/AuthProvider";
 const NAV_ITEMS = [
   { href: "/sessions", label: "Sessions", icon: NotebookPen, requiresAuth: true },
   { href: "/progress", label: "Progress", icon: Activity, requiresAuth: false },
-  { href: "/grades", label: "Grade Converter", icon: Mountain },
   { href: "/gyms", label: "Gyms", icon: MapPin },
+  { href: "/grades", label: "Grade Converter", icon: Mountain },
   { href: "/partners", label: "Find a Partner", icon: Users },
   { href: "/inbox", label: "Inbox", icon: InboxIcon, requiresAuth: true },
 ];
 
-function NavLink({ href, label, icon: Icon, onClick, disabled, compact = false }: any) {
+function NavLink({ href, label, icon: Icon, onClick, disabled, compact = false, mobile = false }: any) {
   const [isActive] = useRoute(href);
   const className = cn(
-    "relative flex items-center gap-3 px-4 py-3 rounded-lg font-display text-lg sm:text-xl tracking-wider transition-all duration-300 group overflow-hidden",
+    "relative flex items-center gap-3 px-3 py-2.5 rounded-lg font-display tracking-wider transition-all duration-300 group overflow-hidden",
+    mobile ? "text-sm" : "text-base sm:text-xl",
     compact && "justify-center px-2 py-3",
     disabled
       ? "opacity-50 cursor-not-allowed bg-transparent text-muted-foreground"
@@ -39,7 +40,7 @@ function NavLink({ href, label, icon: Icon, onClick, disabled, compact = false }
       {!isActive && (
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary opacity-0 -translate-x-full group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
       )}
-      <Icon className={cn("w-5 h-5 mb-0.5 relative z-10 transition-transform duration-300 group-hover:scale-110", isActive && "drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]")} />
+      <Icon className={cn("mb-0.5 relative z-10 transition-transform duration-300 group-hover:scale-110", mobile ? "w-4 h-4" : "w-5 h-5", isActive && "drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]")} />
       {!compact && <span className="relative z-10">{label}</span>}
       {!compact && disabled ? (
         <span className="ml-auto text-[10px] uppercase tracking-widest text-muted-foreground relative z-10">
@@ -62,7 +63,7 @@ function NavLink({ href, label, icon: Icon, onClick, disabled, compact = false }
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, userId, isConfigured, isLoading: authLoading, signIn, signUp, signOut } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
@@ -70,6 +71,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
+  const [contactPopupOpen, setContactPopupOpen] = useState(false);
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactTopic, setContactTopic] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  const [contactSubmitted, setContactSubmitted] = useState(false);
   const [authCooldownUntil, setAuthCooldownUntil] = useState<number | null>(null);
   const isAuthCooldownActive =
     authCooldownUntil != null && Date.now() < authCooldownUntil;
@@ -91,6 +98,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [desktopSidebarHovered, setDesktopSidebarHovered] = useState(false);
   const [desktopSidebarPinnedOpen, setDesktopSidebarPinnedOpen] = useState(false);
   const isDesktopSidebarExpanded = desktopSidebarHovered || desktopSidebarPinnedOpen;
+  const canNavigateBack = location !== "/" && typeof window !== "undefined" && window.history.length > 1;
+  const navigateBack = () => {
+    if (canNavigateBack) {
+      window.history.back();
+      return;
+    }
+    setLocation("/");
+  };
 
   const submitAuth = async () => {
     const now = Date.now();
@@ -165,6 +180,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Ensure every route navigation starts at top.
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location]);
+
+  useEffect(() => {
     const media = window.matchMedia("(pointer: fine)");
     const sync = () => setShowHandCursor(media.matches);
     sync();
@@ -220,14 +240,67 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </motion.div>
       )}
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-3 bg-card border-b border-border sticky top-0 z-40">
-        <Link href="/" className="flex items-center gap-2 text-primary">
-          <Mountain className="w-6 h-6" />
-          <span className="font-display text-xl tracking-widest mt-0.5">CRAGMATE</span>
-        </Link>
-        <button onClick={() => setMobileOpen(true)} className="text-foreground p-2">
-          <Menu className="w-6 h-6" />
-        </button>
+      <div className="md:hidden flex items-center justify-between gap-3 px-4 py-2.5 bg-card border-b border-border sticky top-0 z-40">
+        <div className="flex items-center gap-2">
+          {location !== "/" ? (
+            <button
+              type="button"
+              className="w-8 h-8 rounded-md bg-background/60 text-foreground flex items-center justify-center"
+              onClick={navigateBack}
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-4 h-4 text-primary" />
+            </button>
+          ) : null}
+          <Link href="/" className="flex items-center gap-2 text-primary">
+          <Mountain className="w-5 h-5" />
+          <span className="font-display text-lg tracking-widest mt-0.5">CRAGMATE</span>
+          </Link>
+        </div>
+        <div className="flex items-center gap-1.5 ml-auto">
+          <Link
+            href="/"
+            className="w-8 h-8 rounded-md bg-background/60 text-foreground flex items-center justify-center"
+            aria-label="Go home"
+          >
+            <House className="w-4 h-4 text-primary" />
+          </Link>
+          {user ? (
+            <button
+              type="button"
+              className="w-8 h-8 rounded-full bg-background/60 text-foreground flex items-center justify-center"
+              onClick={() => {
+                setAuthMode("login");
+                setAuthOpen(true);
+              }}
+              aria-label="Profile"
+            >
+              <span className="font-display text-[11px] text-primary">{initials}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="h-8 px-2.5 rounded-md bg-background/60 text-[11px] font-semibold uppercase tracking-wide text-foreground"
+              onClick={() => {
+                setAuthMode("login");
+                setAuthOpen(true);
+                if (!isConfigured) {
+                  setAuthError("Auth not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in artifacts/cragmate/.env then restart the web dev server.");
+                }
+              }}
+            >
+              Login
+            </button>
+          )}
+          <button
+            type="button"
+            className="w-8 h-8 rounded-md bg-background/60 text-foreground flex items-center justify-center"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open menu"
+          >
+            <Menu className="w-4 h-4 text-primary" />
+          </button>
+        </div>
       </div>
 
       {/* Mobile Drawer */}
@@ -240,112 +313,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
               onClick={() => setMobileOpen(false)}
             />
             <motion.div 
-              initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
+              initial={{ y: "-100%" }} animate={{ y: 0 }} exit={{ y: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-card border-r border-border z-50 p-4 flex flex-col overflow-y-auto"
+              className="fixed inset-x-0 top-0 mx-2 mt-2 max-h-[64vh] rounded-xl bg-card border border-border z-50 px-3 py-2.5 flex flex-col overflow-y-auto"
             >
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 text-primary drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]">
-                  <Mountain className="w-8 h-8" />
-                  <span className="font-display text-2xl tracking-widest mt-1">CRAGMATE</span>
+                  <Mountain className="w-5 h-5" />
+                  <span className="font-display text-base tracking-widest mt-0.5">CRAGMATE</span>
                 </div>
                 <button onClick={() => setMobileOpen(false)} className="text-muted-foreground">
-                  <X className="w-6 h-6" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 {NAV_ITEMS.map((item) => (
                   <NavLink
                     key={item.href}
                     {...item}
+                    mobile
                     disabled={item.requiresAuth && !user}
                     onClick={() => setMobileOpen(false)}
                   />
                 ))}
               </div>
 
-              {/* Mobile Auth / User */}
-              <div className="mt-auto pt-6 border-t border-border">
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center font-display text-xl text-foreground group relative overflow-hidden">
-                    <span className="relative z-10">{initials}</span>
-                    <div className="absolute inset-0 bg-primary/20 scale-0 group-hover:scale-100 transition-transform rounded-full" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground truncate">{displayName}</p>
-                    <p className="text-[11px] uppercase tracking-wider text-primary/80">
-                      {user ? `Welcome, ${username}` : "Guest mode"}
-                    </p>
-                    {user ? (
-                      <p className="text-[11px] text-muted-foreground/90 truncate whitespace-nowrap">
-                        Streak: {streak} week{streak === 1 ? "" : "s"}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="mt-4 flex gap-2 flex-nowrap">
-                  {!user ? (
-                    <Button
-                      variant="outline"
-                      className="flex-1 whitespace-nowrap px-2"
-                      onClick={() => {
-                        setAuthMode("login");
-                        setAuthOpen(true);
-                        setMobileOpen(false);
-                        if (!isConfigured) {
-                          setAuthError(
-                            "Auth not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in artifacts/cragmate/.env then restart the web dev server.",
-                          );
-                        }
-                      }}
-                    >
-                      <LogIn className="w-4 h-4 mr-1 shrink-0" />
-                      <span className="text-sm">Login</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      className="flex-1 whitespace-nowrap px-2"
-                      onClick={() => {
-                        signOut();
-                        setMobileOpen(false);
-                      }}
-                    >
-                      <LogOut className="w-4 h-4 mr-1 shrink-0" />
-                      <span className="text-sm">Logout</span>
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="outline"
-                    className="flex-1 whitespace-nowrap px-2"
-                    onClick={() => {
-                      setAuthMode("signup");
-                      setAuthOpen(true);
-                      setMobileOpen(false);
-                      if (!isConfigured) {
-                        setAuthError(
-                          "Auth not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in artifacts/cragmate/.env then restart the web dev server.",
-                        );
-                      }
-                    }}
-                    disabled={Boolean(user)}
-                  >
-                    <UserIcon className="w-4 h-4 mr-1 shrink-0" />
-                    <span className="text-sm">Sign Up</span>
-                  </Button>
-                </div>
-
-                {!isConfigured && (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Enable auth by adding{" "}
-                    <span className="font-mono">VITE_SUPABASE_URL</span> and{" "}
-                    <span className="font-mono">VITE_SUPABASE_ANON_KEY</span> to{" "}
-                    <span className="font-mono">artifacts/cragmate/.env</span>, then restart Vite.
-                  </p>
-                )}
-              </div>
             </motion.div>
           </>
         )}
@@ -472,7 +464,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-x-hidden relative">
-        <div className="max-w-6xl mx-auto p-3 sm:p-6 md:p-8">
+        <div className="max-w-6xl mx-auto px-4 py-3 sm:p-6 md:p-8">
+          {location !== "/" ? (
+            <div className="hidden md:block mb-3 sm:mb-4">
+              <button
+                type="button"
+                onClick={navigateBack}
+                className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/85 transition-colors"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+            </div>
+          ) : null}
           <AnimatePresence mode="wait">
             <motion.div
               key={location}
@@ -485,6 +490,53 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </motion.div>
           </AnimatePresence>
         </div>
+        <footer className="mt-8 sm:mt-10 bg-card/55">
+          <div className="max-w-6xl mx-auto px-3 py-5 sm:p-6 md:p-8 sm:pt-11 border-t border-border/80">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8 md:gap-10 text-left">
+              <div className="w-full md:max-w-[20rem] md:justify-self-start">
+                <p className="hidden sm:block text-primary font-semibold">Cragmate</p>
+                <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-1.5 sm:mt-2">
+                  Your ultimate climbing companion.
+                </p>
+              </div>
+              <div className="w-full md:max-w-[16rem] md:justify-self-center">
+                <p className="text-xs sm:text-sm font-semibold text-foreground">Legal</p>
+                <div className="mt-1.5 sm:mt-2 space-y-1 sm:space-y-1.5 text-xs sm:text-sm">
+                  <Link href="/privacy" className="block text-muted-foreground hover:text-foreground transition-colors">
+                    Privacy Policy
+                  </Link>
+                  <Link href="/terms" className="block text-muted-foreground hover:text-foreground transition-colors">
+                    Terms of Service
+                  </Link>
+                </div>
+              </div>
+              <div className="w-full md:max-w-[16rem] md:justify-self-end">
+                <p className="text-xs sm:text-sm font-semibold text-foreground">Resources</p>
+                <div className="mt-1.5 sm:mt-2 space-y-1 sm:space-y-1.5 text-xs sm:text-sm">
+                  <Link href="/gyms" className="block text-muted-foreground hover:text-foreground transition-colors">
+                    Explore Gyms
+                  </Link>
+                  <Link href="/partners" className="block text-muted-foreground hover:text-foreground transition-colors">
+                    Find a Partner
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContactPopupOpen(true);
+                      setContactSubmitted(false);
+                    }}
+                    className="block w-full text-left text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Contact Us
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 sm:mt-7 pt-3 sm:pt-4 border-t border-border/70 text-left md:text-center text-[11px] sm:text-xs text-muted-foreground">
+              © 2026 Cragmate. All rights reserved.
+            </div>
+          </div>
+        </footer>
       </main>
 
       <Dialog open={authOpen} onOpenChange={setAuthOpen} title={authMode === "login" ? "Login" : "Sign up"}>
@@ -513,6 +565,51 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {authMode === "login" ? "Need an account? Sign up" : "Already have an account? Login"}
           </button>
         </div>
+      </Dialog>
+      <Dialog open={contactPopupOpen} onOpenChange={setContactPopupOpen} title="Reach out to Cragmate">
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setContactSubmitted(true);
+          }}
+        >
+          <p className="text-sm text-muted-foreground">
+            Want to collaborate, feedback, or say hi? Drop your details here.
+          </p>
+          <Input
+            value={contactName}
+            onChange={(e) => setContactName(e.target.value)}
+            placeholder="Your name"
+          />
+          <Input
+            type="email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            placeholder="Your email"
+          />
+          <Input
+            value={contactTopic}
+            onChange={(e) => setContactTopic(e.target.value)}
+            placeholder="Topic (e.g. Collab, Sponsorship, Feedback)"
+          />
+          <textarea
+            value={contactMessage}
+            onChange={(e) => setContactMessage(e.target.value)}
+            placeholder="Message"
+            rows={4}
+            className="w-full rounded-md border border-primary/25 bg-background/70 px-3 py-2 text-sm outline-none focus:border-primary/60"
+          />
+          {contactSubmitted ? (
+            <p className="text-xs text-primary">Saved locally for now. We can connect this to your backend next.</p>
+          ) : null}
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" onClick={() => setContactPopupOpen(false)}>
+              Close
+            </Button>
+            <Button type="submit">Send</Button>
+          </div>
+        </form>
       </Dialog>
     </div>
   );

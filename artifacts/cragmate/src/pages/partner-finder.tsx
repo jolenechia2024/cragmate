@@ -215,9 +215,9 @@ export default function PartnerFinder() {
 
   return (
     <Layout>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 sm:mb-8 gap-3 sm:gap-4">
         <div>
-          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">Find a Partner</h1>
+          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Find a Partner</h1>
           <p className="text-muted-foreground text-base sm:text-lg">Need a belay or a projecting buddy? Post here.</p>
         </div>
         <Button
@@ -249,9 +249,9 @@ export default function PartnerFinder() {
           {[1, 2, 3].map(i => <div key={i} className="h-32 bg-card rounded-xl animate-pulse" />)}
         </div>
       ) : posts?.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-primary/20">
+        <Card className="p-8 sm:p-12 text-center border-dashed border-primary/20">
           <User className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
-          <h3 className="text-2xl font-display uppercase mb-2">No active posts</h3>
+          <h3 className="text-xl sm:text-2xl font-display uppercase mb-2">No active posts</h3>
           <p className="text-muted-foreground mb-6">Be the first to look for a partner.</p>
           <Button
             onClick={() => {

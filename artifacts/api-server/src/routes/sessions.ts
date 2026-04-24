@@ -72,6 +72,7 @@ router.post("/sessions", requireSupabaseAuth, async (req, res) => {
   try {
     const body = CreateSessionBody.parse(req.body);
     const userId = (req as any).authUserId as string;
+    const trimmedNotes = body.notes?.trim() ?? "";
     const [session] = await db
       .insert(sessionsTable)
       .values({
@@ -79,7 +80,7 @@ router.post("/sessions", requireSupabaseAuth, async (req, res) => {
         userId,
         gymId: body.gymId,
         date: body.date,
-        notes: body.notes ?? null,
+        notes: trimmedNotes || null,
       })
       .returning();
 

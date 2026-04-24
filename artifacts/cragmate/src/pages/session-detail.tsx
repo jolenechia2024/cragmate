@@ -4,13 +4,12 @@ import { useGetSession, useListClimbs, useCreateClimb, useDeleteClimb, getListCl
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
 import { useRoute, useLocation } from "wouter";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, X, Trash2, MountainSnow } from "lucide-react";
-import { Link } from "wouter";
+import { Check, X, Trash2, MountainSnow } from "lucide-react";
 
 const climbSchema = z.object({
   grade: z.string().min(1, "Grade is required"),
@@ -30,6 +29,15 @@ export default function SessionDetail() {
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("openClimb") !== "1") return;
+    setIsDialogOpen(true);
+    params.delete("openClimb");
+    const next = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", next);
+  }, []);
+
   const { data: session, isLoading: sessionLoading } = useGetSession(sessionId, {
     query: { enabled: Boolean(user), queryKey: getGetSessionQueryKey(sessionId) },
   });
@@ -40,11 +48,11 @@ export default function SessionDetail() {
   if (!user) {
     return (
       <Layout>
-        <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">
             Session
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Please log in to view session details.
           </p>
         </div>
@@ -60,6 +68,7 @@ export default function SessionDetail() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListClimbsQueryKey(sessionId) });
         queryClient.invalidateQueries({ queryKey: getGetSessionQueryKey(sessionId) });
+        queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId }) });
         setIsDialogOpen(false);
         reset();
       }
@@ -71,6 +80,7 @@ export default function SessionDetail() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListClimbsQueryKey(sessionId) });
         queryClient.invalidateQueries({ queryKey: getGetSessionQueryKey(sessionId) });
+        queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId }) });
       }
     }
   });
@@ -94,7 +104,14 @@ export default function SessionDetail() {
   });
 
   const onSubmit = (data: z.infer<typeof climbSchema>) => {
-    createMutation.mutate({ sessionId, data });
+    const userNotes = data.notes?.trim() ?? "";
+    createMutation.mutate({
+      sessionId,
+      data: {
+        ...data,
+        notes: userNotes || undefined,
+      },
+    });
   };
 
   const handleDeleteSession = () => {
@@ -108,14 +125,11 @@ export default function SessionDetail() {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <Link href="/sessions" className="inline-flex items-center gap-2 text-primary hover:underline font-semibold uppercase tracking-wider text-sm mb-4">
-          <ArrowLeft className="w-4 h-4" /> Back to Logs
-        </Link>
+      <div className="mb-5 sm:mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
           <div>
-            <h1 className="text-4xl sm:text-5xl font-display uppercase tracking-widest mb-1">{session.gymName}</h1>
-            <p className="text-muted-foreground text-lg flex items-center gap-2">
+            <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-1">{session.gymName}</h1>
+            <p className="text-muted-foreground text-sm sm:text-base flex items-center gap-2">
               {formatDate(session.date)}
             </p>
           </div>
@@ -133,33 +147,33 @@ export default function SessionDetail() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-10">
         <Card className="p-6 bg-gradient-to-br from-stone-900 to-stone-950">
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Total Climbs</p>
-          <p className="text-4xl sm:text-5xl font-display text-white">{session.climbCount}</p>
+          <p className="text-3xl sm:text-4xl font-display text-white">{session.climbCount}</p>
         </Card>
         <Card className="p-6 bg-gradient-to-br from-stone-900 to-stone-950">
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Top Grade</p>
-          <p className="text-4xl sm:text-5xl font-display text-primary">{session.topGrade || '-'}</p>
+          <p className="text-3xl sm:text-4xl font-display text-primary">{session.topGrade || '-'}</p>
         </Card>
         <Card className="p-6 bg-gradient-to-br from-stone-900 to-stone-950">
           <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Sends</p>
-          <p className="text-4xl sm:text-5xl font-display text-green-500">
+          <p className="text-3xl sm:text-4xl font-display text-green-500">
             {climbs?.filter(c => c.sent).length || 0}
           </p>
         </Card>
       </div>
 
-      <h2 className="text-2xl sm:text-3xl font-display uppercase tracking-widest mb-6">Ascent Log</h2>
+      <h2 className="text-2xl sm:text-3xl font-display uppercase tracking-widest mb-4 sm:mb-6">Ascent Log</h2>
       
       {climbsLoading ? (
         <div className="space-y-4">
           {[1,2].map(i => <div key={i} className="h-20 bg-card rounded-xl animate-pulse" />)}
         </div>
       ) : climbs?.length === 0 ? (
-        <Card className="p-12 text-center border-dashed">
+        <Card className="p-8 sm:p-12 text-center border-dashed">
           <MountainSnow className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-          <p className="text-lg text-muted-foreground">No climbs logged yet.</p>
+          <p className="text-base sm:text-lg text-muted-foreground">No climbs logged yet.</p>
         </Card>
       ) : (
         <div className="space-y-4">
@@ -243,7 +257,7 @@ export default function SessionDetail() {
 
           <div>
             <Label>Notes</Label>
-            <Textarea placeholder="Beta, thoughts, crux..." {...register("notes")} />
+            <Textarea placeholder="Write your climb notes..." {...register("notes")} />
           </div>
 
           <Button type="submit" className="w-full" disabled={createMutation.isPending}>
