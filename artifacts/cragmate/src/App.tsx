@@ -13,6 +13,7 @@ import GymDashboard from "@/pages/gym-dashboard";
 import PartnerFinder from "@/pages/partner-finder";
 import Inbox from "@/pages/inbox";
 import Beginner from "@/pages/beginner";
+import QuizPage from "@/pages/quiz";
 import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
 import NotFound from "@/pages/not-found";
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/partners" component={PartnerFinder} />
       <Route path="/inbox" component={Inbox} />
       <Route path="/beginner" component={Beginner} />
+      <Route path="/quiz" component={QuizPage} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
       <Route component={NotFound} />
