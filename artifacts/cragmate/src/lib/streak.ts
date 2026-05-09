@@ -70,6 +70,34 @@ function getWeekStartDayKey(dayKey: string): string {
   return getLocalDayKey(dt);
 }
 
+/**
+ * Weeks are Monday-started (consistent with streak bump logic below).
+ * Streak counts consecutive ISO weeks backwards that each contain ≥1 logged session day.
+ * If there's no climb in the calendar week containing "today" yet, the chain may still continue
+ * from the previous Monday (grace so early-week climbers keep the headline number until the idle week lapses).
+ */
+export function weeklyStreakFromSessionDays(sessionDayInputs: readonly string[]): number {
+  const weekStarts = new Set<string>();
+  for (const raw of sessionDayInputs) {
+    const dk = normalizeDayKey(raw);
+    if (!dk) continue;
+    weekStarts.add(getWeekStartDayKey(dk));
+  }
+  if (weekStarts.size === 0) return 0;
+
+  const todayKey = getLocalDayKey(new Date());
+  let cursor = getWeekStartDayKey(todayKey);
+  if (!weekStarts.has(cursor)) cursor = addDays(cursor, -7);
+  if (!weekStarts.has(cursor)) return 0;
+
+  let streak = 0;
+  while (weekStarts.has(cursor)) {
+    streak++;
+    cursor = addDays(cursor, -7);
+  }
+  return streak;
+}
+
 export function bumpClimbingStreak(sessionDay?: string): StreakState {
   if (typeof window === "undefined") {
     return { currentStreak: 0, lastClimbedDay: "" };

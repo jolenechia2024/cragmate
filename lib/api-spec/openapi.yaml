@@ -389,6 +389,9 @@ components:
           type: string
         climbCount:
           type: integer
+        sendCount:
+          type: integer
+          description: Number of climbs marked sent in this session.
         topGrade:
           type: string
         createdAt:
@@ -419,6 +422,9 @@ components:
           type: string
         climbCount:
           type: integer
+        sendCount:
+          type: integer
+          description: Number of climbs marked sent in this session.
         topGrade:
           type: string
         createdAt:

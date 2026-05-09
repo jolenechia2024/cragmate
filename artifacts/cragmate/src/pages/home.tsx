@@ -1983,7 +1983,7 @@ export default function Home() {
       {loading ? (
         <div style={{ position: "absolute", inset: 0, zIndex: 100, background: "hsl(var(--background))", overflow: "hidden" }}>
           <div
-              style={{
+            style={{
               position: "absolute",
               inset: 0,
               background: doorOpening
@@ -2014,16 +2014,16 @@ export default function Home() {
                 <span style={{ position: "relative", display: "inline-block" }}>
                   <motion.span
                     aria-hidden
-                    style={{
+              style={{
                       position: "absolute",
                       left: "50%",
                       top: "50%",
                       transform: "translate(-50%, -52%)",
                       width: "125%",
                       height: "155%",
-                      background:
+                background:
                         "radial-gradient(ellipse 55% 50% at 50% 42%, rgba(0,212,170,0.55) 0%, rgba(0,212,170,0.12) 52%, transparent 74%)",
-                      filter: "blur(22px)",
+                filter: "blur(22px)",
                       pointerEvents: "none",
                       zIndex: 0,
                       borderRadius: "50%",
@@ -2040,7 +2040,7 @@ export default function Home() {
                     <motion.span
                       key={`bolt-${i}`}
                       aria-hidden
-                      style={{
+              style={{
                         position: "absolute",
                         left: b.left,
                         top: b.top,
@@ -2053,32 +2053,32 @@ export default function Home() {
                         pointerEvents: "none",
                         zIndex: 1,
                         borderRadius: 999,
-                        background:
+                background:
                           "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 20%, rgba(180,255,245,0.95) 50%, rgba(0,212,170,0.85) 62%, transparent 82%)",
                         mixBlendMode: "screen",
                         filter: "blur(0.4px)",
                         boxShadow: "0 0 12px rgba(0,212,170,0.55), 0 0 24px rgba(0,212,170,0.25)",
                       }}
                       initial={{ opacity: 0 }}
-                      animate={{
+                animate={{
                         opacity: [0, 0, 0.95, 0.12, 0, 0, 0.8, 0, 0, 0.5, 0, 0],
-                      }}
-                      transition={{
+                }}
+                transition={{
                         duration: 5.8,
-                        repeat: Infinity,
+                  repeat: Infinity,
                         ease: "linear",
                         delay: b.del,
-                      }}
-                    />
-                  ))}
+                }}
+              />
+            ))}
                   <motion.span
                     className="font-display uppercase"
-                    animate={{
+              animate={{
                       opacity: [0.78, 1, 0.82, 0.96, 0.74, 0.99, 0.84],
                       color: ["#00d4aa", "#effefa", "#00e9c8", "#00d4aa", "#c6fff0", "#00d4aa", "#d5fff4"],
                     }}
                     transition={{ duration: 2.35, repeat: Infinity, ease: "easeInOut" }}
-                    style={{
+              style={{
                       position: "relative",
                       zIndex: 2,
                       display: "inline-block",
@@ -2088,8 +2088,8 @@ export default function Home() {
                     }}
                   >
                     Conquer The Crag
-                  </motion.span>
-                </span>
+                </motion.span>
+                      </span>
             </motion.h1>
               <p style={{ color: "rgba(255,255,255,0.52)", fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", margin: 0, fontFamily: "inherit" }}>
                 {doorOpening ? "Doors opening..." : "Approaching entrance..."}
@@ -2269,8 +2269,8 @@ export default function Home() {
           {climbState === "active" && resultType && !chalkOverlaySeen ? (
             <div style={{ position: "absolute", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.2)" }}>
               <div style={{ position: "relative", borderTop: "2px solid", borderBottom: "2px solid", background: "rgba(0,0,0,0.82)", padding: isMobile ? "22px 20px" : "28px 44px", textAlign: "center", backdropFilter: "blur(6px)", maxWidth: isMobile ? "90vw" : "min(760px, 86vw)" }}>
-                <button
-                  type="button"
+      <button
+        type="button"
                   aria-label="Close"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -2293,7 +2293,7 @@ export default function Home() {
                   }}
                 >
                   <X size={18} strokeWidth={2} />
-                </button>
+      </button>
                 <h2 className="font-display" style={{ margin: "0 0 8px", paddingRight: isMobile ? 36 : 40, fontSize: isMobile ? "clamp(2.1rem,11vw,3rem)" : "clamp(3.2rem,7vw,4.6rem)", fontWeight: 800, letterSpacing: "-0.03em", color: "#fff", lineHeight: 0.94 }}>
                   CHALKED UP.
                 </h2>
@@ -2301,7 +2301,7 @@ export default function Home() {
                   <Button onClick={goClimbNow} className="h-12 px-8 uppercase tracking-[0.14em] text-sm font-semibold">
                     Go Climb Now
             </Button>
-      </div>
+        </div>
             </div>
             </div>
           ) : null}
@@ -2319,7 +2319,7 @@ export default function Home() {
               onMouseDown={(e) => e.stopPropagation()}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
+            e.preventDefault();
                   setFocusWarmUpZone(true);
                   setShowWarmUpPrompt(false);
                 }
@@ -2392,9 +2392,9 @@ export default function Home() {
               {isMobile ? "Scroll down to explore" : "Drag to explore"}
             </motion.p>
             <div style={{ width: 1, height: 24, background: `linear-gradient(to bottom, ${current.accent}88, transparent)` }} />
-      </div>
+          </div>
         </>
           ) : null}
-          </div>
+      </div>
   );
 }

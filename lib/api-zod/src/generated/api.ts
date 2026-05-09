@@ -53,12 +53,14 @@ export const ListGymsResponseItem = zod.object({
     .boolean()
     .optional()
     .describe(
-      "When true, this outlet is especially beginner-friendly (intro passes, easier circuits, family\/rope options, or strong first-timer onboarding). Not set for every gym.",
+      "When true, this outlet is especially beginner-friendly (intro\/taster passes, easier circuits, mall or MRT access, auto-belay\/top-rope for first visits, or strong first-timer onboarding).",
     ),
   beginnerNotes: zod
     .string()
     .optional()
-    .describe("Short Cragmate note on why the outlet is tagged beginner-friendly."),
+    .describe(
+      "Short Cragmate note on why the outlet is tagged beginner-friendly (not an official gym claim).",
+    ),
 });
 export const ListGymsResponse = zod.array(ListGymsResponseItem);
 
@@ -77,6 +79,10 @@ export const ListSessionsResponseItem = zod.object({
   date: zod.string(),
   notes: zod.string().optional(),
   climbCount: zod.number(),
+  sendCount: zod
+    .number()
+    .optional()
+    .describe("Number of climbs marked sent in this session."),
   topGrade: zod.string().optional(),
   createdAt: zod.string(),
 });
@@ -107,6 +113,10 @@ export const GetSessionResponse = zod.object({
   date: zod.string(),
   notes: zod.string().optional(),
   climbCount: zod.number(),
+  sendCount: zod
+    .number()
+    .optional()
+    .describe("Number of climbs marked sent in this session."),
   topGrade: zod.string().optional(),
   createdAt: zod.string(),
   climbs: zod.array(

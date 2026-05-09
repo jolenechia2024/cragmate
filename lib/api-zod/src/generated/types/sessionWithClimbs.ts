@@ -15,6 +15,8 @@ export interface SessionWithClimbs {
   date: string;
   notes?: string;
   climbCount: number;
+  /** Number of climbs marked sent in this session. */
+  sendCount?: number;
   topGrade?: string;
   createdAt: string;
   climbs: Climb[];

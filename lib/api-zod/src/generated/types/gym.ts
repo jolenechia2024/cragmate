@@ -28,8 +28,8 @@ export interface Gym {
   routesetSchedule?: GymRoutesetSchedule;
   routesetScheduleUpdatedAt?: Date;
   description?: string;
-  /** When true, this outlet is especially beginner-friendly (intro passes, easier circuits, family/rope options, or strong first-timer onboarding). Not set for every gym. */
+  /** When true, this outlet is especially beginner-friendly (intro/taster passes, easier circuits, mall or MRT access, auto-belay/top-rope for first visits, or strong first-timer onboarding). */
   beginnerFriendly?: boolean;
-  /** Short Cragmate note on why the outlet is tagged beginner-friendly. */
+  /** Short Cragmate note on why the outlet is tagged beginner-friendly (not an official gym claim). */
   beginnerNotes?: string;
 }

@@ -55,6 +55,7 @@ router.get("/sessions", requireSupabaseAuth, async (req, res) => {
           date: row.session.date,
           notes: row.session.notes ?? undefined,
           climbCount: Number(row.climbCount),
+          sendCount: sentClimbs.length,
           topGrade: topGrade || undefined,
           createdAt: row.session.createdAt.toISOString(),
         };
@@ -98,6 +99,7 @@ router.post("/sessions", requireSupabaseAuth, async (req, res) => {
       date: session.date,
       notes: session.notes ?? undefined,
       climbCount: 0,
+      sendCount: 0,
       createdAt: session.createdAt.toISOString(),
     });
   } catch (err) {
@@ -141,6 +143,7 @@ router.get("/sessions/:id", requireSupabaseAuth, async (req, res) => {
       date: row.session.date,
       notes: row.session.notes ?? undefined,
       climbCount: climbs.length,
+      sendCount: sentClimbs.length,
       topGrade: topGrade || undefined,
       createdAt: row.session.createdAt.toISOString(),
       climbs: climbs.map((c) => ({

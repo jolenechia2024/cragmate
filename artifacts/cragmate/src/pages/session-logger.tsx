@@ -10,7 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Calendar, Activity, Sparkles, Check, ChevronLeft, ChevronRight, Mountain } from "lucide-react";
-import { bumpClimbingStreak, getStreak } from "@/lib/streak";
+import { bumpClimbingStreak, getStreak, weeklyStreakFromSessionDays } from "@/lib/streak";
 
 const sessionSchema = z.object({
   gymId: z.coerce.number().min(1, "Please select a gym"),
@@ -68,18 +68,14 @@ function SessionMonthHeatmapCalendar({ sessions }: { sessions: SessionLikeCalend
   const todayDate = today.getDate();
 
   const summary = useMemo(() => {
-    let climbs = 0;
-    let visits = 0;
-    let days = 0;
+    let sessionCount = 0;
     for (let d = 1; d <= lastDate; d++) {
       const key = formatYmd(y, mon, d);
       const a = dayAgg.get(key);
       if (!a || a.sessions === 0) continue;
-      days += 1;
-      visits += a.sessions;
-      climbs += a.climbs;
+      sessionCount += a.sessions;
     }
-    return { climbs, visits, activeDays: days };
+    return { sessionCount };
   }, [dayAgg, y, mon, lastDate]);
 
   const shiftMonth = (delta: number) => setCursor(new Date(y, mon + delta, 1));
@@ -134,27 +130,17 @@ function SessionMonthHeatmapCalendar({ sessions }: { sessions: SessionLikeCalend
               className="flex h-10 sm:h-11 w-full items-center justify-center"
             >
               {hasSession ? (
-                <div className={cn("relative flex items-center justify-center", isTodayCell && "drop-shadow-[0_0_8px_rgba(0,212,170,0.45)]")}>
-                  <span
-                    className={cn(
-                      "inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full",
-                      "border border-primary/55 bg-gradient-to-b from-primary/30 to-primary/12",
-                      "shadow-[0_2px_12px_rgba(0,212,170,0.2)]",
-                      isTodayCell && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background",
-                    )}
-                  >
-                    <Mountain className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" strokeWidth={2.4} />
-                  </span>
-                  <span
-                    className={cn(
-                      "absolute -right-1 -bottom-0.5 min-w-[15px] h-[15px] px-0.5 rounded-full",
-                      "bg-primary text-[9px] font-bold leading-[15px] text-center text-primary-foreground",
-                      "border border-primary/60 shadow-sm tabular-nums",
-                    )}
-                  >
-                    {climbs > 99 ? "99+" : climbs}
-                  </span>
-                </div>
+                <span
+                  className={cn(
+                    "inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full",
+                    "border border-primary/55 bg-gradient-to-b from-primary/30 to-primary/12",
+                    "shadow-[0_2px_12px_rgba(0,212,170,0.2)]",
+                    isTodayCell && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background drop-shadow-[0_0_8px_rgba(0,212,170,0.45)]",
+                  )}
+                  aria-hidden
+                >
+                  <Mountain className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" strokeWidth={2.4} />
+                </span>
               ) : (
                 <span
                   className={cn(
@@ -170,19 +156,10 @@ function SessionMonthHeatmapCalendar({ sessions }: { sessions: SessionLikeCalend
         })}
       </div>
 
-      <div className="px-4 py-3 border-t border-border/50 bg-muted/20 flex flex-wrap gap-x-6 gap-y-2 text-[11px] sm:text-xs text-muted-foreground">
-        <span>
-          <strong className="text-foreground font-display tabular-nums text-sm">{summary.activeDays}</strong>
-          {" "}days with sessions
-        </span>
-        <span>
-          <strong className="text-foreground font-display tabular-nums text-sm">{summary.visits}</strong>
-          {" "}sessions
-        </span>
-        <span>
-          <strong className="text-foreground font-display tabular-nums text-sm">{summary.climbs}</strong>
-          {" "}total climbs logged
-        </span>
+      <div className="px-4 py-3 border-t border-border/50 bg-muted/20 text-[11px] sm:text-xs text-muted-foreground">
+        <strong className="text-foreground font-display tabular-nums text-base sm:text-lg">{summary.sessionCount}</strong>
+        {" "}
+        total sessions this month
       </div>
     </Card>
   );
@@ -292,7 +269,15 @@ export default function SessionLogger() {
     },
   ];
   const displayedSessions = isGuest ? sampleSessions : sessions;
-  
+
+  /** Mon–Sun weeks: count consecutive backwards from this week where each week has ≥1 logged session date. */
+  const weeklyStreakDerived = useMemo(() => {
+    if (user && isLoading) return null;
+    return weeklyStreakFromSessionDays(displayedSessions.map((s) => String(s.date)));
+  }, [user, isLoading, displayedSessions]);
+
+  const streakWeeksDisplayed = weeklyStreakDerived !== null ? weeklyStreakDerived : streak;
+
   const createMutation = useCreateSession({
     mutation: {
       onSuccess: (createdSession: { id?: number } | undefined) => {
@@ -372,10 +357,10 @@ export default function SessionLogger() {
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground">Weekly streak</p>
             <p className="font-display text-xl sm:text-2xl mt-1">
-              {streak} week{streak === 1 ? "" : "s"}
+              {streakWeeksDisplayed} week{streakWeeksDisplayed === 1 ? "" : "s"}
             </p>
             <p className="text-muted-foreground text-sm mt-1">
-              {streak > 0 ? "Log at least one session this week to keep it going." : "Log your first session this week to start your streak."}
+              Consecutive calendar weeks (Mon–Sun), each with at least one session date in your log — counted backward from today.
             </p>
           </div>
         </div>
