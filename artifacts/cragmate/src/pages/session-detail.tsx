@@ -10,7 +10,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, X, Trash2, MountainSnow } from "lucide-react";
-
 const climbSchema = z.object({
   grade: z.string().min(1, "Grade is required"),
   gradeSystem: z.string().min(1, "System is required"),

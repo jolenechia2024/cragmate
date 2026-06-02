@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, MapPin, Calendar, Clock, Trash2, User } from "lucide-react";
+import { Plus, MapPin, Calendar, Trash2, User } from "lucide-react";
 
 const postSchema = z.object({
   gymId: z.coerce.number().min(1, "Gym is required"),
@@ -48,7 +48,6 @@ export default function PartnerFinder() {
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [messageDraft, setMessageDraft] = useState("");
   const [publicReplyDrafts, setPublicReplyDrafts] = useState<Record<number, string>>({});
-  
   const { data: postsRaw, isLoading } = useListPartnerPosts();
   const posts = Array.isArray(postsRaw) ? postsRaw : [];
   const { data: gymsRaw } = useListGyms();
@@ -412,8 +411,12 @@ export default function PartnerFinder() {
           </div>
 
           <div>
-            <Label>Message (Optional)</Label>
-            <Textarea placeholder="Looking for a belay partner, projecting the blue route..." {...register("message")} />
+            <Label>Message (optional)</Label>
+            <Textarea
+              className="mt-1"
+              placeholder="e.g. Looking for someone to project V4s, casual session…"
+              {...register("message")}
+            />
           </div>
           
           <Button type="submit" className="w-full" disabled={createMutation.isPending}>

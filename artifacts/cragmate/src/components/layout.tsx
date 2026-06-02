@@ -173,7 +173,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const onStreak = () => setStreak(getStreak().currentStreak);
+    const onStreak = (e: Event) => {
+      const weeks = (e as CustomEvent<{ weeks?: number }>).detail?.weeks;
+      setStreak(typeof weeks === "number" ? weeks : getStreak().currentStreak);
+    };
     window.addEventListener("cragmate:streak-updated", onStreak as EventListener);
     return () =>
       window.removeEventListener("cragmate:streak-updated", onStreak as EventListener);
