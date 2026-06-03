@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
  */
 const BEGINNER_NOTES: Record<string, string> = {
   "Ground Up Climbing":
-    "Well-rounded gym with bouldering, auto-belay and top-rope; supportive environment for first-timers exploring both ropes and bouldering.",
+    "Well-rounded gym with auto-belay and top-rope; supportive environment for first-timers exploring ropes and climbing.",
 
   "Climb Central @ Kallang Wave Mall":
     "Highly accessible near MRT; iconic tall wall with auto-belay and beginner-friendly routes.",
@@ -22,22 +22,22 @@ const BEGINNER_NOTES: Record<string, string> = {
     "Rope-focused environment with auto-belay; calmer and more family-oriented atmosphere.",
 
   "BFF Climb @ Bendemeer (CT Hub)":
-    "Good mix of bouldering and auto-belay with frequent route resets; beginner-friendly progression.",
+    "Good mix of climbing styles with auto-belay and frequent route resets; beginner-friendly progression.",
 
   "BFF Climb @ Our Tampines Hub":
-    "Spacious with natural ventilation; offers bouldering, auto-belay and top-rope with strong beginner support.",
+    "Spacious with natural ventilation; offers climbing, auto-belay and top-rope with strong beginner support.",
 
   "Fit Bloc @ Kent Ridge (Science Park)":
     "Large facility with high auto-belay walls; great for first-timers trying height safely.",
 
   "Boulder Movement @ Tai Seng":
-    "Spacious bouldering gym with many easier routes; one of the more beginner-friendly bouldering options.",
+    "Spacious climbing gym with many easier routes; one of the more beginner-friendly options.",
 
   "Boulder+ @ Aperia Mall":
-    "Wide range of difficulty levels with approachable beginner problems; good entry into bouldering.",
+    "Wide range of difficulty levels with approachable beginner problems; good entry into indoor climbing.",
 
   "OYEYO Boulder Home":
-    "Accessible and budget-friendly bouldering gym with varied wall angles suitable for beginners.",
+    "Accessible and budget-friendly climbing gym with varied wall angles suitable for beginners.",
 };
 
 const gyms = [

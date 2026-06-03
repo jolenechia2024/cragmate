@@ -6,6 +6,7 @@ import { getStreak } from "@/lib/streak";
 import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { Dialog, Button, Input, Label } from "@/components/ui";
 import { useAuth } from "@/auth/AuthProvider";
+import { NewToClimbingFab } from "@/components/new-to-climbing-fab";
 
 const NAV_ITEMS = [
   { href: "/sessions", label: "Sessions", icon: NotebookPen, requiresAuth: true },
@@ -614,6 +615,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </form>
       </Dialog>
+      <NewToClimbingFab />
     </div>
   );
 }

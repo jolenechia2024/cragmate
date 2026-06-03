@@ -3,7 +3,7 @@ import { Button, Card, Dialog } from "@/components/ui";
 import { CLIMB_BOOSTS } from "@/lib/climb-boosts";
 import { QUESTION_BANK } from "@/lib/quiz-bank";
 import { Link } from "wouter";
-import { ArrowRight, Compass, Mountain, TrendingUp, Users, ChevronUp } from "lucide-react";
+import { ArrowRight, Mountain, TrendingUp, Users, ChevronUp } from "lucide-react";
 import Lenis from "lenis";
 import {
   useEffect,
@@ -16,7 +16,13 @@ import {
 } from "react";
 import { motion, useMotionTemplate, useMotionValue, useTransform } from "framer-motion";
 import { useScroll } from "framer-motion";
-import { DOOR_LOADER_TOTAL_MS, DOOR_OPEN_DELAY_MS, HomeEntranceLoader } from "@/components/home-entrance-loader";
+import {
+  CONTENT_FADE_MS,
+  DOOR_EXIT_FADE_MS,
+  DOOR_OPEN_DELAY_MS,
+  HOME_REVEAL_DELAY_MS,
+  HomeEntranceLoader,
+} from "@/components/home-entrance-loader";
 
 export default function Home() {
 const QUIZ_STORAGE_KEY = "cragmate_climber_quiz_v4";
@@ -118,6 +124,8 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [doorOpening, setDoorOpening] = useState(false);
+  const [loaderExiting, setLoaderExiting] = useState(false);
+  const [homeRevealed, setHomeRevealed] = useState(false);
   // Boulder rotation is drag-controlled in 3D (no auto-rotation).
   const boulderRotateX = useMotionValue(8);
   const boulderRotateY = useMotionValue(-12);
@@ -135,7 +143,6 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
   const pageDustTrailIdRef = useRef(0);
   const pageDustTrailLastSpawnRef = useRef(0);
   const [hoveredConquerLetterIdx, setHoveredConquerLetterIdx] = useState<number | null>(null);
-  const [beginnerPopupOpen, setBeginnerPopupOpen] = useState(false);
   const heroSectionRef = useRef<HTMLDivElement | null>(null);
   const rightFaceOpacity = useTransform(boulderRotateY, (v) => {
     const s = Math.sin((v * Math.PI) / 180);
@@ -571,6 +578,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     const seen = window.sessionStorage.getItem("cragmate_home_loader_seen") === "1";
     if (seen) {
       setLoading(false);
+      setHomeRevealed(true);
       return;
     }
     const t = window.setTimeout(() => setDoorOpening(true), DOOR_OPEN_DELAY_MS);
@@ -579,11 +587,20 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
 
   useEffect(() => {
     if (!loading || !doorOpening) return;
-    const t = window.setTimeout(() => {
+
+    const revealT = window.setTimeout(() => setHomeRevealed(true), HOME_REVEAL_DELAY_MS);
+    const exitT = window.setTimeout(() => setLoaderExiting(true), HOME_REVEAL_DELAY_MS + CONTENT_FADE_MS);
+    const doneT = window.setTimeout(() => {
       window.sessionStorage.setItem("cragmate_home_loader_seen", "1");
       setLoading(false);
-    }, DOOR_LOADER_TOTAL_MS);
-    return () => window.clearTimeout(t);
+      setLoaderExiting(false);
+    }, HOME_REVEAL_DELAY_MS + CONTENT_FADE_MS + DOOR_EXIT_FADE_MS);
+
+    return () => {
+      window.clearTimeout(revealT);
+      window.clearTimeout(exitT);
+      window.clearTimeout(doneT);
+    };
   }, [doorOpening, loading]);
 
   useEffect(() => {
@@ -651,9 +668,19 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
 
   return (
     <Layout>
-      {loading ? <HomeEntranceLoader doorOpening={doorOpening} /> : null}
+      {loading ? (
+        <HomeEntranceLoader
+          doorOpening={doorOpening}
+          revealed={homeRevealed}
+          exiting={loaderExiting}
+        />
+      ) : null}
       <div
-        className="relative"
+        className="relative transition-[opacity,transform] duration-[900ms] ease-out"
+        style={{
+          opacity: homeRevealed ? 1 : 0,
+          transform: homeRevealed ? "scale(1)" : "scale(0.98)",
+        }}
         onPointerMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           const now = performance.now();
@@ -1052,7 +1079,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
           />
         ))}
         <div className="text-center mb-6">
-          <p className="text-xs sm:text-sm uppercase tracking-[0.22em] text-primary/80">Feature Boulder</p>
+          <p className="text-xs sm:text-sm uppercase tracking-[0.22em] text-primary/80">Feature Wall</p>
           <h2 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-6xl uppercase tracking-[0.06em] mt-2 leading-[0.95]">
             Tap a hold to view feature
           </h2>
@@ -1923,27 +1950,6 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
       </div>
             </div>
       </motion.div>
-      <button
-        type="button"
-        onClick={() => setBeginnerPopupOpen(true)}
-        className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-background/85 px-4 py-2 text-xs sm:text-sm font-semibold uppercase tracking-wider text-primary shadow-[0_0_20px_rgba(0,212,170,0.18)] backdrop-blur-sm hover:bg-background transition-colors"
-      >
-        <Compass className="w-4 h-4" />
-        New to climbing ? 
-      </button>
-
-      <Dialog open={beginnerPopupOpen} onOpenChange={setBeginnerPopupOpen} title="First time climbing?">
-        <div className="space-y-4">
-          <p className="text-muted-foreground leading-relaxed">
-            Start with the beginner checklist and quick technique tips.
-          </p>
-          <Link href="/beginner">
-            <Button className="w-full" size="lg" onClick={() => setBeginnerPopupOpen(false)}>
-              Open beginner guide <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </Link>
-        </div>
-      </Dialog>
       <Dialog open={contactPopupOpen} onOpenChange={setContactPopupOpen} title="Reach out to Cragmate">
         <form
           className="space-y-3"

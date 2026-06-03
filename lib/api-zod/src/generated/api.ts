@@ -246,6 +246,7 @@ export const CreatePartnerPostBody = zod.object({
   sessionTime: zod.string().optional(),
   gradeRange: zod.string(),
   message: zod.string().optional(),
+  anonymous: zod.boolean().optional(),
 });
 
 /**

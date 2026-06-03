@@ -74,10 +74,10 @@ router.post("/ai/beginner-help", async (req, res) => {
     const { question, holdType, topic } = parsed.data;
 
     const contextParts = [
-      "Context: User is a beginner indoor boulderer in Singapore.",
+      "Context: User is a beginner indoor climber in Singapore.",
       holdType ? `They are asking about hold type: ${holdType}.` : null,
       topic ? `Topic area: ${topic}.` : null,
-      "Key beginner tips you may reference: quiet feet, hips close to wall, rest 2-3 min between hard tries, land with bent knees, start easy (VB-V2), bring shoes/chalk/water.",
+      "Key beginner tips you may reference: quiet feet, hips close to wall, rest 2-3 min between hard tries, land with bent knees, start on easy grades, bring shoes/chalk/water.",
       "Hold types: jug (big rest hold), crimp (thin edge), sloper (round, needs body tension), pinch, pocket, sidepull, undercling, gaston, volume.",
     ].filter(Boolean);
 

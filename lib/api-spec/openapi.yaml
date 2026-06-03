@@ -627,6 +627,8 @@ components:
           type: string
         message:
           type: string
+        anonymous:
+          type: boolean
       required:
         - userId
         - userName

@@ -153,6 +153,7 @@ export interface CreatePartnerPostRequest {
   sessionTime?: string;
   gradeRange: string;
   message?: string;
+  anonymous?: boolean;
 }
 
 export interface PartnerMessage {

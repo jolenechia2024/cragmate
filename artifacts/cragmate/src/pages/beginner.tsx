@@ -1,6 +1,6 @@
 import { Layout } from "@/components/layout";
 import { PageHeader } from "@/components/page-header";
-import { Card, Button, Input } from "@/components/ui";
+import { Card, Button } from "@/components/ui";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link } from "wouter";
 import {
@@ -11,9 +11,10 @@ import {
   Compass,
   BookOpen,
   Shield,
+  SendHorizontal,
+  User,
 } from "lucide-react";
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { askBeginnerCoach } from "@/lib/ai-api";
 import { cn } from "@/lib/utils";
 import { HOLD_TYPES, type HoldTypeId } from "@/lib/hold-types";
@@ -25,7 +26,7 @@ const SECTION_TRIGGER =
 const CHECKLIST = [
   { icon: Backpack, label: "Pack", detail: "Shoes, chalk, water" },
   { icon: Flame, label: "Warm up", detail: "5–10 min easy climbs" },
-  { icon: Mountain, label: "Start easy", detail: "VB–V2 or gym greens" },
+  { icon: Mountain, label: "Start easy", detail: "Easy grades or gym greens" },
   { icon: StretchHorizontal, label: "Cool down", detail: "Light stretch after" },
 ] as const;
 
@@ -51,8 +52,97 @@ const SUGGESTED_QUESTIONS = [
   "Why do my arms get tired so fast?",
 ];
 
+function softenPunctuation(text: string) {
+  return text.replace(/\s*[—–]\s*/g, ". ").replace(/\.\.+/g, ".");
+}
+
+function CoachMascot({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} aria-hidden>
+      <circle cx="32" cy="35" r="21" fill="#2db892" />
+      <ellipse cx="32" cy="30" rx="14" ry="10" fill="#7ee8c4" opacity="0.35" />
+      <path d="M32 12c-4 0-7 3-8 7l3 1c1-2 3-3 5-3s4 1 5 3l3-1c-1-4-4-7-8-7z" fill="#157a5c" />
+      <circle cx="32" cy="13" r="2.5" fill="#8fdcc8" />
+      <circle cx="25" cy="34" r="3.2" fill="#051915" />
+      <circle cx="39" cy="34" r="3.2" fill="#051915" />
+      <circle cx="26" cy="33" r="1" fill="#ffffff" opacity="0.9" />
+      <circle cx="40" cy="33" r="1" fill="#ffffff" opacity="0.9" />
+      <path d="M26 42c2.5 3 9.5 3 12 0" fill="none" stroke="#051915" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="19" cy="38" r="2.8" fill="#ff9eb5" opacity="0.45" />
+      <circle cx="45" cy="38" r="2.8" fill="#ff9eb5" opacity="0.45" />
+    </svg>
+  );
+}
+
+function CoachBubble({
+  children,
+  className,
+  tone = "default",
+  ...props
+}: {
+  children: ReactNode;
+  className?: string;
+  tone?: "default" | "accent" | "error";
+} & ComponentPropsWithoutRef<"div">) {
+  return (
+    <div className={cn("flex max-w-[95%] items-end gap-3 sm:max-w-[90%]", className)} {...props}>
+      <CoachMascot className="mb-1 size-10 shrink-0 sm:size-11" />
+      <div
+        className={cn(
+          "min-w-0 flex-1 rounded-2xl rounded-bl-md px-4 py-3.5 text-sm leading-relaxed shadow-sm",
+          tone === "default" && "border border-border/60 bg-background/75",
+          tone === "accent" && "border border-primary/20 bg-primary/[0.08] text-foreground",
+          tone === "error" && "border border-destructive/25 bg-destructive/10 text-destructive",
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function UserBubble({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex max-w-full items-end justify-end gap-3">
+      <div className="max-w-[85%] rounded-2xl rounded-br-md border border-primary/20 bg-primary/12 px-4 py-3.5 text-sm leading-relaxed text-foreground shadow-sm">
+        {children}
+      </div>
+      <UserAvatar className="mb-1" />
+    </div>
+  );
+}
+
+function UserAvatar({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted text-muted-foreground",
+        className,
+      )}
+      aria-hidden
+    >
+      <User className="size-4" />
+    </div>
+  );
+}
+
+function TypingDots() {
+  return (
+    <span className="inline-flex items-center gap-1" aria-hidden>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="size-1.5 rounded-full bg-primary/70 animate-pulse"
+          style={{ animationDelay: `${i * 180}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
+
 function BeginnerCoach({ holdTypeName }: { holdTypeName: string }) {
   const [question, setQuestion] = useState("");
+  const [sentQuestion, setSentQuestion] = useState<string | null>(null);
   const [answer, setAnswer] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,15 +151,19 @@ function BeginnerCoach({ holdTypeName }: { holdTypeName: string }) {
 
   async function handleAsk() {
     if (!canAsk || loading) return;
+    const trimmed = question.trim();
+    setSentQuestion(trimmed);
+    setQuestion("");
+    setAnswer(null);
     setLoading(true);
     setError(null);
     try {
       const text = await askBeginnerCoach({
-        question: question.trim(),
+        question: trimmed,
         holdType: holdTypeName,
-        topic: "beginner bouldering",
+        topic: "beginner climbing",
       });
-      setAnswer(text);
+      setAnswer(softenPunctuation(text));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -77,72 +171,82 @@ function BeginnerCoach({ holdTypeName }: { holdTypeName: string }) {
     }
   }
 
-    return (
-    <Card className="mb-8 sm:mb-10 p-4 sm:p-6 border-primary/30 bg-card">
-      <h2 className="text-xl sm:text-2xl font-display uppercase tracking-wider text-foreground mb-4">
-        Cragmate AI Coach
-      </h2>
+  return (
+    <>
+      <p className="mb-3 text-xs uppercase tracking-widest text-muted-foreground">Crag Coach</p>
+      <section className="mb-8 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card to-card shadow-[0_12px_40px_rgba(0,0,0,0.18)] sm:mb-10">
+        <div className="space-y-5 px-4 py-5 sm:space-y-6 sm:px-6 sm:py-6">
+        <CoachBubble>
+          <p>
+            Hey! Ask me anything about climbing. Gear, gym etiquette, how to read holds, what to try first.
+          </p>
+          <p className="mt-3 text-[11px] leading-snug text-muted-foreground/90">
+            Friendly tips only, not medical or professional coaching. Pain or injury? Rest and see a doctor.
+          </p>
+        </CoachBubble>
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void handleAsk();
-          }}
-          placeholder="Ask about your first session…"
-          className="flex-1"
-          aria-label="Your question"
-        />
-        <Button
-          type="button"
-          className="shrink-0 sm:min-w-[5.5rem]"
-          disabled={!canAsk || loading}
-          onClick={() => void handleAsk()}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              …
-            </>
-          ) : (
-            "Ask"
-          )}
-        </Button>
-      </div>
+        {sentQuestion ? <UserBubble>{sentQuestion}</UserBubble> : null}
 
-      <div className="flex flex-wrap gap-2 mt-3">
-        {SUGGESTED_QUESTIONS.map((q) => (
-          <button
-            key={q}
-            type="button"
-            onClick={() => setQuestion(q)}
-            className="text-xs px-2.5 py-1 rounded-full border border-border/80 text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
-          >
-            {q}
-          </button>
-        ))}
-      </div>
+        {loading ? (
+          <CoachBubble aria-live="polite">
+            <TypingDots />
+            <span className="sr-only">Coach is typing</span>
+          </CoachBubble>
+        ) : null}
 
-      {error && (
-        <p className="mt-4 text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      )}
+        {error ? (
+          <CoachBubble tone="error" role="alert">
+            {error}
+          </CoachBubble>
+        ) : null}
 
-      {answer && !error && (
-        <div
-          className="mt-4 rounded-lg border border-border/80 bg-background/50 p-4 text-sm text-foreground leading-relaxed whitespace-pre-wrap"
-          role="status"
-        >
-          {answer}
+        {answer && !error ? (
+          <CoachBubble tone="accent" role="status">
+            <p className="whitespace-pre-wrap">{answer}</p>
+          </CoachBubble>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          {SUGGESTED_QUESTIONS.map((q) => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => setQuestion(q)}
+              className="rounded-full border border-border/80 bg-background/50 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+            >
+              {q}
+            </button>
+          ))}
         </div>
-      )}
 
-      <p className="mt-4 text-[11px] text-muted-foreground/80 leading-snug">
-        Friendly tips only — not medical or professional coaching. Pain or injury? Rest and see a doctor.
-      </p>
-    </Card>
+        <div className="rounded-2xl border border-border/60 bg-background/70 px-4 py-3 shadow-sm transition-colors focus-within:border-primary/35">
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleAsk();
+              }}
+              placeholder="Ask about your first climb..."
+              aria-label="Your question"
+              className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            />
+            <Button
+              type="button"
+              size="icon"
+              className="size-9 shrink-0 rounded-full"
+              disabled={!canAsk || loading}
+              onClick={() => void handleAsk()}
+              aria-label="Send question"
+            >
+              <SendHorizontal className="size-4" />
+            </Button>
+          </div>
+        </div>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -154,7 +258,7 @@ export default function Beginner() {
     <Layout>
       <PageHeader
         title="Beginner guide"
-        description="First bouldering session in Singapore? Start here."
+        description="First climbing session in Singapore? Start here."
       />
 
       <BeginnerCoach holdTypeName={activeHold.name} />
@@ -226,7 +330,7 @@ export default function Beginner() {
                   </button>
                 ))}
               </div>
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 sm:p-4">
+              <div className="overflow-hidden rounded-lg border border-primary/20 bg-primary/5 p-3 sm:p-4">
                 <HoldTypeDetail holdId={activeHoldId} hold={activeHold} />
               </div>
             </AccordionContent>

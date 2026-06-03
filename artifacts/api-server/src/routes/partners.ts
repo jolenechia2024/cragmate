@@ -47,11 +47,12 @@ router.post("/partner-posts", requireSupabaseAuth, async (req, res) => {
     const authUserId = (req as any).authUserId as string;
     const body = CreatePartnerPostBody.parse(req.body);
     if (body.userId !== authUserId) return res.status(403).json({ error: "Forbidden" });
+    const displayName = body.anonymous ? "Anonymous" : body.userName;
     const [post] = await db
       .insert(partnerPostsTable)
       .values({
         userId: body.userId,
-        userName: body.userName,
+        userName: displayName,
         gymId: body.gymId,
         sessionDate: body.sessionDate,
         sessionTime: body.sessionTime ?? null,

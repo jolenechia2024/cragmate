@@ -1,6 +1,7 @@
 import { Layout } from "@/components/layout";
 import { PageHeader } from "@/components/page-header";
 import { Card, Button, Dialog, Input, Label, Select, Textarea, Badge } from "@/components/ui";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   useListPartnerPosts,
   useCreatePartnerPost,
@@ -27,7 +28,6 @@ import {
   ChevronUp,
   Clock,
   Mountain,
-  Inbox,
 } from "lucide-react";
 
 const postSchema = z.object({
@@ -72,6 +72,7 @@ export default function PartnerFinder() {
   const [publicReplyDrafts, setPublicReplyDrafts] = useState<Record<number, string>>({});
   const [gymFilter, setGymFilter] = useState<number | "all">("all");
   const [expandedReplies, setExpandedReplies] = useState<Record<number, boolean>>({});
+  const [postAnonymously, setPostAnonymously] = useState(false);
 
   const { data: postsRaw, isLoading } = useListPartnerPosts();
   const posts = Array.isArray(postsRaw) ? postsRaw : [];
@@ -109,6 +110,7 @@ export default function PartnerFinder() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPartnerPostsQueryKey() });
         setIsDialogOpen(false);
+        setPostAnonymously(false);
         reset();
       },
     },
@@ -258,6 +260,7 @@ export default function PartnerFinder() {
         message: message ? stripSurroundingQuotes(message) : undefined,
         userId,
         userName: user?.email?.split("@")[0] ?? "Guest Climber",
+        anonymous: postAnonymously,
       },
     });
   };
@@ -298,17 +301,6 @@ export default function PartnerFinder() {
             </Link>
             .
           </p>
-        </div>
-      )}
-
-      {user && (
-        <div className="mb-6 flex flex-wrap items-center gap-3">
-          <Link href="/inbox">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Inbox className="w-4 h-4" />
-              Open inbox
-            </Button>
-          </Link>
         </div>
       )}
 
@@ -386,6 +378,7 @@ export default function PartnerFinder() {
             const replyCount = replies.length;
             const isExpanded = Boolean(expandedReplies[post.id]);
             const isOwnPost = Boolean(user && post.userId === userId);
+            const isAnonymous = post.userName === "Anonymous";
             const description = post.message ? stripSurroundingQuotes(post.message) : "";
 
             return (
@@ -400,10 +393,18 @@ export default function PartnerFinder() {
                         {post.userName.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-display text-lg uppercase tracking-wide truncate">
-                          {post.userName}
-                        </h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-display text-lg uppercase tracking-wide truncate">
+                            {post.userName}
+                          </h3>
+                          {isAnonymous ? (
+                            <Badge className="text-[10px] uppercase tracking-wider border border-border/60 bg-muted/30">
+                              Anonymous
+                            </Badge>
+                          ) : null}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
+                          {isOwnPost && isAnonymous ? "Posted anonymously · " : ""}
                           Posted {formatDate(post.createdAt)}
                         </p>
                       </div>
@@ -550,7 +551,14 @@ export default function PartnerFinder() {
         </div>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} title="Post a session">
+      <Dialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) setPostAnonymously(false);
+        }}
+        title="Post a session"
+      >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
             <Label>Gym</Label>
@@ -606,6 +614,22 @@ export default function PartnerFinder() {
               placeholder="Projecting V4s, need a belay, casual session…"
               {...register("message")}
             />
+          </div>
+
+          <div className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/10 p-3">
+            <Checkbox
+              id="post-anonymous"
+              checked={postAnonymously}
+              onCheckedChange={(checked) => setPostAnonymously(checked === true)}
+            />
+            <div className="min-w-0">
+              <Label htmlFor="post-anonymous" className="cursor-pointer font-medium text-foreground">
+                Post anonymously
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                Your name won&apos;t show on the post. You can still get replies and private messages.
+              </p>
+            </div>
           </div>
 
           <Button type="submit" className="w-full" disabled={createMutation.isPending}>
