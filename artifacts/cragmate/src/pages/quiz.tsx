@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
@@ -90,17 +90,6 @@ export default function QuizPage() {
     [selectedQuestionIndices],
   );
 
-  const [quizStep, setQuizStep] = useState(() => {
-    try {
-      const raw = window.localStorage.getItem(QUIZ_STORAGE_KEY);
-      if (!raw) return 0;
-      const p = JSON.parse(raw) as { quizStep?: number };
-      return typeof p.quizStep === "number" ? p.quizStep : 0;
-    } catch {
-      return 0;
-    }
-  });
-
   const [quiz, setQuiz] = useState<QuizState>(() => {
     try {
       const raw = window.localStorage.getItem(QUIZ_STORAGE_KEY);
@@ -124,12 +113,26 @@ export default function QuizPage() {
     }
   });
 
-  const currentAxis = axes[quizStep] ?? null;
-  const resultBlurb = useMemo(() => climberTypeBlurb(resultType), [resultType]);
-
   const persist = (next: { quizStep: number; quiz: QuizState; resultType: ClimberType | null; selectedQuestionIndices: number[] }) => {
     window.localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(next));
   };
+
+  const firstUnansweredIdx = axes.findIndex((ax) => !quiz[ax.key]);
+  const allAnswered = axes.length > 0 && firstUnansweredIdx === -1;
+  const currentAxis = !resultType && firstUnansweredIdx >= 0 ? axes[firstUnansweredIdx] ?? null : null;
+  const resultBlurb = useMemo(() => climberTypeBlurb(resultType), [resultType]);
+  const showQuestions = Boolean(currentAxis);
+  const progressLabel = resultType
+    ? "Done"
+    : `${Math.min(firstUnansweredIdx >= 0 ? firstUnansweredIdx + 1 : axes.length, axes.length)}/${axes.length}`;
+
+  useEffect(() => {
+    if (resultType || !allAnswered) return;
+    const computed = computeType(axes, quiz);
+    if (!computed) return;
+    setResultType(computed);
+    persist({ quizStep: axes.length, quiz, resultType: computed, selectedQuestionIndices });
+  }, [allAnswered, axes, quiz, resultType, selectedQuestionIndices]);
 
   const choose = (value: ClimberType) => {
     if (!currentAxis) return;
@@ -138,20 +141,21 @@ export default function QuizPage() {
     if (computed) {
       setQuiz(nextQuiz);
       setResultType(computed);
-      setQuizStep(axes.length);
       persist({ quizStep: axes.length, quiz: nextQuiz, resultType: computed, selectedQuestionIndices });
       return;
     }
-    const nextStep = quizStep + 1;
     setQuiz(nextQuiz);
-    setQuizStep(nextStep);
-    persist({ quizStep: nextStep, quiz: nextQuiz, resultType: null, selectedQuestionIndices });
+    persist({
+      quizStep: firstUnansweredIdx + 1,
+      quiz: nextQuiz,
+      resultType: null,
+      selectedQuestionIndices,
+    });
   };
 
   const resetQuiz = () => {
     const nextIndices = shuffleAndPickN(QUESTION_BANK.length, QUIZ_LENGTH);
     setSelectedQuestionIndices(nextIndices);
-    setQuizStep(0);
     setQuiz({});
     setResultType(null);
     window.localStorage.removeItem(QUIZ_STORAGE_KEY);
@@ -166,21 +170,21 @@ export default function QuizPage() {
             <h1 className="font-display text-2xl sm:text-4xl uppercase tracking-wider mt-1 leading-tight">
               What type of climber are you?
             </h1>
-            <p className="text-muted-foreground mt-3 max-w-2xl">
-              {axes.length} quick questions — get your climber type.
+            <p className="text-muted-foreground mt-3 leading-relaxed max-w-2xl">
+              Quick vibe check: answer {axes.length} fun questions and get your Cragmate climber type.
             </p>
           </div>
           <div className="hidden sm:block text-right">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">Progress</p>
-            <p className="font-display text-3xl mt-1">{resultType ? "Done" : `${Math.min(quizStep + 1, axes.length)}/${axes.length}`}</p>
+            <p className="font-display text-3xl mt-1">{progressLabel}</p>
           </div>
         </div>
 
-        {!resultType && currentAxis ? (
+        {showQuestions && currentAxis ? (
           <>
             <div className="mt-6 rounded-xl border border-border bg-background/40 p-4">
               <p className="text-sm text-muted-foreground uppercase tracking-widest">
-                Question {quizStep + 1} / {axes.length}
+                Question {firstUnansweredIdx + 1} / {axes.length}
               </p>
               <p className="font-display text-xl sm:text-2xl mt-2 leading-snug">{currentAxis.question}</p>
 
@@ -207,7 +211,7 @@ export default function QuizPage() {
               <Button variant="ghost" onClick={resetQuiz}>Retake</Button>
             </div>
           </>
-        ) : (
+        ) : resultType ? (
           <div className="mt-6 rounded-xl border border-border bg-background/40 p-5">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">Your result</p>
             <p className="font-display text-3xl sm:text-4xl mt-2 text-primary drop-shadow-[0_0_10px_rgba(0,212,170,0.15)] break-words">
@@ -219,6 +223,15 @@ export default function QuizPage() {
               <Link href="/">
                 <Button variant="outline">Back to Home</Button>
               </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-xl border border-border bg-background/40 p-5">
+            <p className="text-muted-foreground leading-relaxed">
+              Saved quiz progress looks incomplete. Start fresh to get your climber type.
+            </p>
+            <div className="mt-4">
+              <Button variant="primary" onClick={resetQuiz}>Start quiz</Button>
             </div>
           </div>
         )}

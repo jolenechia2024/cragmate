@@ -84,7 +84,7 @@ export function InsightCard({
       <Button
         type="button"
         variant="outline"
-        size={compact ? "sm" : "default"}
+        size={compact ? "sm" : "md"}
         className="border-primary/30 hover:border-primary"
         disabled={disabled || loading}
         onClick={handleGenerate}

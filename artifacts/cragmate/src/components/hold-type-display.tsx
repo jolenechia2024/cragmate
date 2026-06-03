@@ -20,10 +20,10 @@ export function HoldTypeDisplay({
   const hold = holdProp ?? getHoldType(holdId);
 
   return (
-    <div className={cn("flex flex-col items-center gap-3", className)}>
+    <div className={cn("flex flex-col items-center gap-2", className)}>
       <div
         className={cn(
-          "relative aspect-square w-full max-w-[220px] overflow-hidden rounded-xl border border-white/10 bg-[#121615]",
+          "relative flex aspect-square w-full max-w-[140px] items-center justify-center overflow-visible rounded-lg border border-white/10 bg-transparent p-2",
           imageClassName,
         )}
       >
@@ -31,7 +31,7 @@ export function HoldTypeDisplay({
           <img
             src={hold.image}
             alt={`${hold.name} hold`}
-            className="h-full w-full object-cover"
+            className="max-h-full max-w-full object-contain brightness-[1.06] contrast-[1.18] saturate-[1.2]"
             loading="lazy"
           />
         ) : (
@@ -56,11 +56,11 @@ export function HoldTypeDetail({ holdId, hold: holdProp, className }: HoldTypeDe
   const hold = holdProp ?? getHoldType(holdId);
 
   return (
-    <div className={cn("grid gap-4 sm:grid-cols-[minmax(0,200px)_1fr] sm:items-start", className)}>
-      <HoldTypeDisplay hold={hold} holdId={hold.id} />
-      <div className="min-w-0">
-        <p className="font-display text-lg sm:text-xl uppercase tracking-wide text-foreground mb-1">{hold.name}</p>
-        <p className="leading-relaxed text-sm sm:text-base text-muted-foreground">{hold.tip}</p>
+    <div className={cn("flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4", className)}>
+      <HoldTypeDisplay hold={hold} holdId={hold.id} className="mx-auto shrink-0 sm:mx-0" />
+      <div className="min-w-0 flex-1 text-center sm:text-left">
+        <p className="font-display text-lg sm:text-xl uppercase tracking-wide text-foreground">{hold.name}</p>
+        <p className="mt-1 leading-snug text-sm sm:text-base text-muted-foreground">{hold.tip}</p>
       </div>
     </div>
   );

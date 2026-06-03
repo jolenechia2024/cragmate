@@ -154,7 +154,7 @@ export default function Beginner() {
     <Layout>
       <PageHeader
         title="Beginner guide"
-        description="First bouldering session in Singapore — start here."
+        description="First bouldering session in Singapore? Start here."
       />
 
       <BeginnerCoach holdTypeName={activeHold.name} />
@@ -226,7 +226,7 @@ export default function Beginner() {
                   </button>
                 ))}
               </div>
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 sm:p-5">
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 sm:p-4">
                 <HoldTypeDetail holdId={activeHoldId} hold={activeHold} />
               </div>
             </AccordionContent>

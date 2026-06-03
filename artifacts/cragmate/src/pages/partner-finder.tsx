@@ -385,7 +385,7 @@ export default function PartnerFinder() {
             const replies = publicRepliesQuery.data?.[post.id] ?? [];
             const replyCount = replies.length;
             const isExpanded = Boolean(expandedReplies[post.id]);
-            const isOwnPost = user && post.userId === userId;
+            const isOwnPost = Boolean(user && post.userId === userId);
             const description = post.message ? stripSurroundingQuotes(post.message) : "";
 
             return (
