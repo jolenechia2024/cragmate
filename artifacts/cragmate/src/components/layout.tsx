@@ -499,7 +499,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div className="w-full md:max-w-[20rem] md:justify-self-start">
                 <p className="hidden sm:block text-primary font-semibold">Cragmate</p>
                 <p className="hidden sm:block text-xs sm:text-sm text-muted-foreground mt-1.5 sm:mt-2">
-                  Your ultimate climbing companion.
+                  Your climbing companion.
                 </p>
               </div>
               <div className="w-full md:max-w-[16rem] md:justify-self-center">

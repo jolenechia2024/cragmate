@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Card, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, Mountain } from "lucide-react";
@@ -22,8 +22,37 @@ function weekdayMondayFirst(d: Date): number {
   return w === 0 ? 6 : w - 1;
 }
 
+type CalendarVariant = "card" | "flat";
+
+const calendarShell: Record<CalendarVariant, string> = {
+  card: "mb-6 overflow-hidden border-primary/25 bg-gradient-to-b from-card via-card to-muted/35 shadow-[0_12px_40px_rgba(0,0,0,0.18)]",
+  flat: "mb-8 border-b border-border/50 pb-6",
+};
+
+function CalendarShell({
+  variant,
+  className,
+  children,
+}: {
+  variant: CalendarVariant;
+  className?: string;
+  children: ReactNode;
+}) {
+  const cls = cn(calendarShell[variant], className);
+  if (variant === "flat") {
+    return <div className={cls}>{children}</div>;
+  }
+  return <Card className={cls}>{children}</Card>;
+}
+
 /** Month grid: session dates show a mountain icon; empty days show the date number. */
-export function SessionMonthHeatmapCalendar({ sessions }: { sessions: SessionLikeCalendar[] }) {
+export function SessionMonthHeatmapCalendar({
+  sessions,
+  variant = "card",
+}: {
+  sessions: SessionLikeCalendar[];
+  variant?: CalendarVariant;
+}) {
   const [cursor, setCursor] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
   const dayAgg = useMemo(() => {
@@ -66,8 +95,13 @@ export function SessionMonthHeatmapCalendar({ sessions }: { sessions: SessionLik
   const shiftMonth = (delta: number) => setCursor(new Date(y, mon + delta, 1));
 
   return (
-    <Card className="mb-6 overflow-hidden border-primary/25 bg-gradient-to-b from-card via-card to-muted/35 shadow-[0_12px_40px_rgba(0,0,0,0.18)]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 pt-4 pb-2">
+    <CalendarShell variant={variant}>
+      <div
+        className={cn(
+          "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2",
+          variant === "card" ? "px-4 pt-4" : "pt-1",
+        )}
+      >
         <div>
           <p className="font-display text-lg sm:text-2xl tracking-wide capitalize">{monthLabel}</p>
         </div>
@@ -84,7 +118,12 @@ export function SessionMonthHeatmapCalendar({ sessions }: { sessions: SessionLik
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-x-1 sm:gap-x-2 px-3 pb-1 text-[10px] sm:text-[11px] text-center uppercase tracking-[0.12em] text-muted-foreground font-semibold">
+      <div
+        className={cn(
+          "grid grid-cols-7 gap-x-1 sm:gap-x-2 pb-1 text-[10px] sm:text-[11px] text-center uppercase tracking-[0.12em] text-muted-foreground font-semibold",
+          variant === "card" ? "px-3" : "px-0",
+        )}
+      >
         {weekdays.map((letter, ix) => (
           <span key={`${letter}-${ix}`} className="py-1">
             {letter}
@@ -92,7 +131,12 @@ export function SessionMonthHeatmapCalendar({ sessions }: { sessions: SessionLik
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-x-px gap-y-1 sm:gap-x-0.5 sm:gap-y-1.5 px-3 sm:px-4 pb-4 pt-0.5">
+      <div
+        className={cn(
+          "grid grid-cols-7 gap-x-px gap-y-1 sm:gap-x-0.5 sm:gap-y-1.5 pb-4 pt-0.5",
+          variant === "card" ? "px-3 sm:px-4" : "px-0",
+        )}
+      >
         {Array.from({ length: lead }).map((_, i) => (
           <div key={`pad-${i}`} className="h-10 sm:h-11" aria-hidden />
         ))}
@@ -136,16 +180,21 @@ export function SessionMonthHeatmapCalendar({ sessions }: { sessions: SessionLik
         })}
       </div>
 
-      <div className="px-4 py-3 border-t border-border/50 bg-muted/20 text-[11px] sm:text-xs text-muted-foreground">
+      <div
+        className={cn(
+          "py-3 text-[11px] sm:text-xs text-muted-foreground",
+          variant === "card" ? "px-4 border-t border-border/50 bg-muted/20" : "pt-4 px-0",
+        )}
+      >
         <strong className="text-foreground font-display tabular-nums text-base sm:text-lg">{summary.sessionCount}</strong> total sessions this month
       </div>
-    </Card>
+    </CalendarShell>
   );
 }
 
-export function SessionMonthHeatmapSkeleton() {
+export function SessionMonthHeatmapSkeleton({ variant = "card" }: { variant?: CalendarVariant } = {}) {
   return (
-    <Card className="mb-6 overflow-hidden border-primary/25 animate-pulse">
+    <CalendarShell variant={variant} className={variant === "card" ? "animate-pulse" : undefined}>
       <div className="h-16 px-4 flex items-center justify-between">
         <div className="h-6 w-40 rounded-md bg-muted" />
         <div className="flex gap-2">
@@ -159,7 +208,12 @@ export function SessionMonthHeatmapSkeleton() {
           <div key={i} className="h-10 sm:h-11 rounded-sm bg-muted/50" />
         ))}
       </div>
-      <div className="h-12 border-t border-border bg-muted/30" />
-    </Card>
+      <div
+        className={cn(
+          "h-12",
+          variant === "card" ? "border-t border-border bg-muted/30" : "pt-2",
+        )}
+      />
+    </CalendarShell>
   );
 }

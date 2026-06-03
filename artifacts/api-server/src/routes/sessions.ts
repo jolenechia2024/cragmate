@@ -164,6 +164,79 @@ router.get("/sessions/:id", requireSupabaseAuth, async (req, res) => {
   }
 });
 
+const UpdateSessionBody = CreateSessionBody.pick({
+  gymId: true,
+  date: true,
+  notes: true,
+}).partial();
+
+router.patch("/sessions/:id", requireSupabaseAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id as string);
+    const userId = (req as any).authUserId as string;
+    const body = UpdateSessionBody.parse(req.body);
+
+    if (body.gymId === undefined && body.date === undefined && body.notes === undefined) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    const existing = await db
+      .select({ id: sessionsTable.id })
+      .from(sessionsTable)
+      .where(and(eq(sessionsTable.id, id), eq(sessionsTable.userId, userId)))
+      .limit(1);
+
+    if (!existing.length) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+
+    const trimmedNotes =
+      body.notes === undefined ? undefined : (body.notes.trim() || null);
+
+    const [updated] = await db
+      .update(sessionsTable)
+      .set({
+        ...(body.gymId !== undefined ? { gymId: body.gymId } : {}),
+        ...(body.date !== undefined ? { date: body.date } : {}),
+        ...(trimmedNotes !== undefined ? { notes: trimmedNotes } : {}),
+      })
+      .where(and(eq(sessionsTable.id, id), eq(sessionsTable.userId, userId)))
+      .returning();
+
+    const gym = await db
+      .select()
+      .from(gymsTable)
+      .where(eq(gymsTable.id, updated.gymId))
+      .limit(1);
+
+    const climbs = await db
+      .select()
+      .from(climbsTable)
+      .where(eq(climbsTable.sessionId, id));
+
+    const sentClimbs = climbs.filter((c) => c.sent);
+    const topGrade = sentClimbs.reduce((best, c) => {
+      return gradeNumeric(c.grade) > gradeNumeric(best) ? c.grade : best;
+    }, "");
+
+    return res.json({
+      id: updated.id,
+      userId: updated.userId,
+      gymId: updated.gymId,
+      gymName: gym[0]?.name ?? "",
+      date: updated.date,
+      notes: updated.notes ?? undefined,
+      climbCount: climbs.length,
+      sendCount: sentClimbs.length,
+      topGrade: topGrade || undefined,
+      createdAt: updated.createdAt.toISOString(),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(400).json({ error: "Failed to update session" });
+  }
+});
+
 router.delete("/sessions/:id", requireSupabaseAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id as string);

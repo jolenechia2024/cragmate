@@ -12,8 +12,8 @@ export default function NotFound() {
         </div>
         <h1 className="text-6xl sm:text-7xl font-display uppercase text-white mb-2">404</h1>
         <h2 className="text-xl sm:text-2xl font-bold tracking-widest uppercase text-muted-foreground mb-6">Off Route</h2>
-        <p className="text-sm sm:text-base text-stone-400 max-w-md mb-8 leading-relaxed">
-          You've climbed too far off the path. The route you're looking for doesn't exist or has been stripped.
+        <p className="text-sm sm:text-base text-stone-400 max-w-md mb-8">
+          This page doesn&apos;t exist — head back home.
         </p>
         <Link href="/">
           <Button size="lg">Downclimb to Home</Button>

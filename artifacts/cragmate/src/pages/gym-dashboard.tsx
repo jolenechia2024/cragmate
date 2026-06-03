@@ -1,4 +1,5 @@
 import { Layout } from "@/components/layout";
+import { PageHeader } from "@/components/page-header";
 import { Card, Input, Badge, Button } from "@/components/ui";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useListGyms, type Gym } from "@workspace/api-client-react";
@@ -109,10 +110,10 @@ export default function GymDashboard() {
 
   return (
     <Layout>
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Local Gyms</h1>
-        <p className="text-muted-foreground text-sm sm:text-base">Compare passes, locations, and reset schedules.</p>
-      </div>
+      <PageHeader
+        title="Local Gyms"
+        description="Compare passes, locations, and reset schedules."
+      />
 
       <div className="flex flex-col w-full gap-3 mb-6 sm:mb-8 md:flex-row md:items-stretch md:gap-4">
         <div className="relative w-full md:flex-1 md:max-w-xl">

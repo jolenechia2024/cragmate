@@ -1,18 +1,18 @@
 import { Layout } from "@/components/layout";
+import { PageHeader } from "@/components/page-header";
 
 export default function Terms() {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        <header className="pb-6 border-b border-border/70">
-          <p className="text-xs uppercase tracking-[0.22em] text-primary/85 mb-2">Cragmate policy</p>
-          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-wider leading-tight">
-            Terms of Service
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground mt-3 leading-relaxed max-w-4xl">
-            By using Cragmate, you agree to these baseline terms for acceptable and safe platform use.
-          </p>
-        </header>
+        <div className="pb-6 border-b border-border/70">
+          <p className="text-xs uppercase tracking-[0.22em] text-primary/85 mb-3">Cragmate policy</p>
+          <PageHeader
+            title="Terms of Service"
+            description="Baseline terms for acceptable and safe platform use."
+            className="mb-0"
+          />
+        </div>
 
         <section className="py-5 sm:py-6 border-b border-border/60">
           <h2 className="text-xl sm:text-2xl font-semibold text-foreground mb-3">Use of Cragmate</h2>

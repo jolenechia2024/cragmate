@@ -16,7 +16,7 @@ import {
 } from "react";
 import { motion, useMotionTemplate, useMotionValue, useTransform } from "framer-motion";
 import { useScroll } from "framer-motion";
-import { HomeEntranceLoader } from "@/components/home-entrance-loader";
+import { DOOR_LOADER_TOTAL_MS, DOOR_OPEN_DELAY_MS, HomeEntranceLoader } from "@/components/home-entrance-loader";
 
 export default function Home() {
 const QUIZ_STORAGE_KEY = "cragmate_climber_quiz_v4";
@@ -573,7 +573,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
       setLoading(false);
       return;
     }
-    const t = window.setTimeout(() => setDoorOpening(true), 260);
+    const t = window.setTimeout(() => setDoorOpening(true), DOOR_OPEN_DELAY_MS);
     return () => window.clearTimeout(t);
   }, []);
 
@@ -582,7 +582,7 @@ const FOLLOW_UP_BOOST = "Uh..what are you waiting for? Go hit the wall now.";
     const t = window.setTimeout(() => {
       window.sessionStorage.setItem("cragmate_home_loader_seen", "1");
       setLoading(false);
-    }, 2650);
+    }, DOOR_LOADER_TOTAL_MS);
     return () => window.clearTimeout(t);
   }, [doorOpening, loading]);
 

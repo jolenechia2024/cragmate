@@ -1,4 +1,5 @@
 import { Layout } from "@/components/layout";
+import { PageHeader } from "@/components/page-header";
 import { Card, Input } from "@/components/ui";
 import { useState } from "react";
 import { Search, ChevronDown } from "lucide-react";
@@ -275,12 +276,10 @@ export default function GradeConverter() {
 
   return (
     <Layout>
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Grade Converter</h1>
-        <p className="text-muted-foreground text-base sm:text-lg">
-          Convert V-scale to local gym grading systems.
-        </p>
-      </div>
+      <PageHeader
+        title="Grade Converter"
+        description="Convert V-scale to local gym grading systems."
+      />
 
       <Card className="p-6 mb-8 border-primary/20 shadow-[0_0_30px_rgba(0,212,170,0.05)]">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">

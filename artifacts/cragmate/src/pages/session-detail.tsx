@@ -1,4 +1,5 @@
 import { Layout } from "@/components/layout";
+import { PageHeader } from "@/components/page-header";
 import { Card, Button, Dialog, Input, Label, Select, Textarea, Badge } from "@/components/ui";
 import { useGetSession, useListClimbs, useCreateClimb, useDeleteClimb, getListClimbsQueryKey, getGetSessionQueryKey, useDeleteSession, getListSessionsQueryKey } from "@workspace/api-client-react";
 import { formatDate } from "@/lib/utils";
@@ -47,14 +48,10 @@ export default function SessionDetail() {
   if (!user) {
     return (
       <Layout>
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">
-            Session
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Please log in to view session details.
-          </p>
-        </div>
+        <PageHeader
+          title="Session"
+          description="Please log in to view session details."
+        />
         <Card className="p-10 border-dashed border-primary/20 text-center">
           <p className="text-muted-foreground">Guest mode is disabled for sessions.</p>
         </Card>
@@ -125,23 +122,22 @@ export default function SessionDetail() {
   return (
     <Layout>
       <div className="mb-5 sm:mb-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-          <div>
-            <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-1">{session.gymName}</h1>
-            <p className="text-muted-foreground text-sm sm:text-base flex items-center gap-2">
-              {formatDate(session.date)}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={handleDeleteSession} disabled={deleteSessionMutation.isPending}>
-              <Trash2 className="w-4 h-4 mr-2" /> Delete
-            </Button>
-            <Button onClick={() => setIsDialogOpen(true)}>Log Climb</Button>
-          </div>
-        </div>
+        <PageHeader
+          title={session.gymName}
+          description={formatDate(session.date)}
+          className="mb-4 sm:mb-5"
+          action={
+            <div className="flex flex-wrap gap-3">
+              <Button variant="outline" onClick={handleDeleteSession} disabled={deleteSessionMutation.isPending}>
+                <Trash2 className="w-4 h-4 mr-2" /> Delete
+              </Button>
+              <Button onClick={() => setIsDialogOpen(true)}>Log Climb</Button>
+            </div>
+          }
+        />
         {session.notes && (
-          <p className="mt-4 text-stone-400 bg-stone-900 p-4 rounded-lg border border-stone-800 italic">
-            "{session.notes}"
+          <p className="mt-4 text-stone-400 bg-stone-900 p-4 rounded-lg border border-stone-800 leading-relaxed">
+            {session.notes}
           </p>
         )}
       </div>

@@ -1,18 +1,18 @@
 import { Layout } from "@/components/layout";
+import { PageHeader } from "@/components/page-header";
 
 export default function Privacy() {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        <header className="pb-6 border-b border-border/70">
-          <p className="text-xs uppercase tracking-[0.22em] text-primary/85 mb-2">Cragmate policy</p>
-          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-wider leading-tight">
-            Privacy Policy
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground mt-3 leading-relaxed max-w-4xl">
-            This Privacy Policy explains how we collect, use, and protect your personal information.
-          </p>
-        </header>
+        <div className="pb-6 border-b border-border/70">
+          <p className="text-xs uppercase tracking-[0.22em] text-primary/85 mb-3">Cragmate policy</p>
+          <PageHeader
+            title="Privacy Policy"
+            description="How we collect, use, and protect your personal information."
+            className="mb-0"
+          />
+        </div>
 
         <section className="py-5 sm:py-6 border-b border-border/60">
           <h2 className="text-xl sm:text-2xl font-semibold text-foreground mb-3">What we collect</h2>

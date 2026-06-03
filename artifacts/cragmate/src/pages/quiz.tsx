@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { Button, Card } from "@/components/ui";
+import { climberTypeBlurb } from "@/lib/climber-type-blurb";
 import { QUESTION_BANK, type ClimberType } from "@/lib/quiz-bank";
 
 const QUIZ_STORAGE_KEY = "cragmate_climber_quiz_v4";
@@ -54,18 +55,6 @@ function computeType(axes: { key: string }[], nextQuiz: QuizState): ClimberType 
   })[0]?.[0] as ClimberType | undefined;
 
   return best ?? "";
-}
-
-function getResultBlurb(resultType: ClimberType | null): string | null {
-  if (!resultType) return null;
-  if (resultType === "Technician") return "All about details: tidy foot placements, clean body positions, and smart repeats.";
-  if (resultType === "Explorer") return "Progress comes from variety - weird beta, new styles, and exploring different wall sections.";
-  if (resultType === "Strategist") return "Plans beat panic: one clear target, tracked attempts, and steady progress through the session.";
-  if (resultType === "Flow Climber") return "Best when movement feels smooth: rhythm, breathing, and timing over brute force.";
-  if (resultType === "Motivator") return "Energy is fuel: a bit of hype and friendly noise can unlock moves that felt stuck.";
-  if (resultType === "Grinder") return "Process-first: same climb, cleaner tries, small upgrades each burn until it clicks.";
-  if (resultType === "Risk-Taker") return "Commits hard: big moves and less hesitation - learning curve includes some dramatic whips.";
-  return "Steady under pressure: reads routes calmly, stays relaxed, and keeps composure on the wall.";
 }
 
 export default function QuizPage() {
@@ -136,7 +125,7 @@ export default function QuizPage() {
   });
 
   const currentAxis = axes[quizStep] ?? null;
-  const resultBlurb = useMemo(() => getResultBlurb(resultType), [resultType]);
+  const resultBlurb = useMemo(() => climberTypeBlurb(resultType), [resultType]);
 
   const persist = (next: { quizStep: number; quiz: QuizState; resultType: ClimberType | null; selectedQuestionIndices: number[] }) => {
     window.localStorage.setItem(QUIZ_STORAGE_KEY, JSON.stringify(next));
@@ -177,8 +166,8 @@ export default function QuizPage() {
             <h1 className="font-display text-2xl sm:text-4xl uppercase tracking-wider mt-1 leading-tight">
               What type of climber are you?
             </h1>
-            <p className="text-muted-foreground mt-3 leading-relaxed max-w-2xl">
-              Quick vibe check: answer {axes.length} fun questions and get your Cragmate climber type.
+            <p className="text-muted-foreground mt-3 max-w-2xl">
+              {axes.length} quick questions — get your climber type.
             </p>
           </div>
           <div className="hidden sm:block text-right">

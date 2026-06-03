@@ -1,4 +1,5 @@
 import { Layout } from "@/components/layout";
+import { PageHeader } from "@/components/page-header";
 import { Button, Card, Dialog, Label, Textarea } from "@/components/ui";
 import { useAuth } from "@/auth/AuthProvider";
 import { cn, formatDate } from "@/lib/utils";
@@ -33,10 +34,7 @@ export default function Inbox() {
   if (!user) {
     return (
       <Layout>
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Inbox</h1>
-          <p className="text-muted-foreground text-base sm:text-lg">Your private messages.</p>
-        </div>
+        <PageHeader title="Inbox" description="Your private messages." />
         <Card className="p-8 sm:p-10 border-dashed border-primary/20 text-center">
           <MessageCircle className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
           <h3 className="text-xl sm:text-2xl font-display uppercase mb-2">Login required</h3>
@@ -109,12 +107,7 @@ export default function Inbox() {
 
   return (
     <Layout>
-      <div className="flex items-end justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <div>
-          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Inbox</h1>
-          <p className="text-muted-foreground text-base sm:text-lg">Your private messages.</p>
-        </div>
-      </div>
+      <PageHeader title="Inbox" description="Your private messages." />
 
       {inboxQuery.isLoading ? (
         <div className="space-y-4">

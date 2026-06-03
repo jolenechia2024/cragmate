@@ -1,14 +1,34 @@
 import { Layout } from "@/components/layout";
+import { PageHeader } from "@/components/page-header";
 import { Card, Button, Dialog, Input, Label, Select, Textarea, Badge } from "@/components/ui";
-import { useListPartnerPosts, useCreatePartnerPost, useListGyms, getListPartnerPostsQueryKey, useDeletePartnerPost } from "@workspace/api-client-react";
-import { cn, formatDate } from "@/lib/utils";
+import {
+  useListPartnerPosts,
+  useCreatePartnerPost,
+  useListGyms,
+  getListPartnerPostsQueryKey,
+  useDeletePartnerPost,
+} from "@workspace/api-client-react";
+import { cn, formatDate, stripSurroundingQuotes } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, MapPin, Calendar, Trash2, User } from "lucide-react";
+import { Link } from "wouter";
+import {
+  Plus,
+  MapPin,
+  Calendar,
+  Trash2,
+  Users,
+  MessageCircle,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Mountain,
+  Inbox,
+} from "lucide-react";
 
 const postSchema = z.object({
   gymId: z.coerce.number().min(1, "Gym is required"),
@@ -17,6 +37,8 @@ const postSchema = z.object({
   gradeRange: z.string().min(1, "Grade range is required"),
   message: z.string().optional(),
 });
+
+const GRADE_PRESETS = ["VB–V2", "V3–V5", "V6–V8", "6A–6C", "7A+"] as const;
 
 type PartnerMessage = {
   id: number;
@@ -48,10 +70,29 @@ export default function PartnerFinder() {
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [messageDraft, setMessageDraft] = useState("");
   const [publicReplyDrafts, setPublicReplyDrafts] = useState<Record<number, string>>({});
+  const [gymFilter, setGymFilter] = useState<number | "all">("all");
+  const [expandedReplies, setExpandedReplies] = useState<Record<number, boolean>>({});
+
   const { data: postsRaw, isLoading } = useListPartnerPosts();
   const posts = Array.isArray(postsRaw) ? postsRaw : [];
   const { data: gymsRaw } = useListGyms();
   const gyms = Array.isArray(gymsRaw) ? gymsRaw : [];
+
+  const filteredPosts = useMemo(() => {
+    if (gymFilter === "all") return posts;
+    return posts.filter((p) => p.gymId === gymFilter);
+  }, [posts, gymFilter]);
+
+  const gymsInPosts = useMemo(() => {
+    const ids = new Set(posts.map((p) => p.gymId));
+    return gyms.filter((g) => ids.has(g.id));
+  }, [posts, gyms]);
+
+  const activeMessagingPost = useMemo(
+    () => posts.find((p) => p.id === activePostId),
+    [posts, activePostId],
+  );
+
   const openLogin = () => {
     window.dispatchEvent(
       new CustomEvent("cragmate:open-auth", {
@@ -59,7 +100,7 @@ export default function PartnerFinder() {
       }),
     );
   };
-  
+
   const createMutation = useCreatePartnerPost({
     request: {
       headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
@@ -69,16 +110,16 @@ export default function PartnerFinder() {
         queryClient.invalidateQueries({ queryKey: getListPartnerPostsQueryKey() });
         setIsDialogOpen(false);
         reset();
-      }
-    }
+      },
+    },
   });
 
   const deleteMutation = useDeletePartnerPost({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPartnerPostsQueryKey() });
-      }
-    }
+      },
+    },
   });
 
   const publicRepliesQuery = useQuery({
@@ -120,10 +161,17 @@ export default function PartnerFinder() {
     onSuccess: (_msg, vars) => {
       queryClient.invalidateQueries({ queryKey: ["partnerPublicReplies"] });
       setPublicReplyDrafts((prev) => ({ ...prev, [vars.postId]: "" }));
+      setExpandedReplies((prev) => ({ ...prev, [vars.postId]: true }));
     },
   });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<z.infer<typeof postSchema>>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm<z.infer<typeof postSchema>>({
     resolver: zodResolver(postSchema),
   });
 
@@ -203,55 +251,118 @@ export default function PartnerFinder() {
       openLogin();
       return;
     }
-    createMutation.mutate({ 
-      data: { 
-        ...data, 
+    const message = data.message?.trim();
+    createMutation.mutate({
+      data: {
+        ...data,
+        message: message ? stripSurroundingQuotes(message) : undefined,
         userId,
-        userName: user?.email?.split("@")[0] ?? "Guest Climber"
-      } 
+        userName: user?.email?.split("@")[0] ?? "Guest Climber",
+      },
     });
   };
 
+  function toggleReplies(postId: number) {
+    setExpandedReplies((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  }
+
   return (
     <Layout>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 sm:mb-8 gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Find a Partner</h1>
-          <p className="text-muted-foreground text-base sm:text-lg">Need a belay or a projecting buddy? Post here.</p>
-        </div>
-        <Button
-          size="lg"
-          onClick={() => {
-            if (!user) {
-              openLogin();
-              return;
-            }
-            setIsDialogOpen(true);
-          }}
-          className="gap-2 w-full md:w-auto"
-        >
-          <Plus className="w-5 h-5" /> Post Session
-        </Button>
-      </div>
+      <PageHeader
+        title="Find a Partner"
+        description="Post a session and connect with climbers at your gym."
+        action={
+          <Button
+            size="lg"
+            onClick={() => {
+              if (!user) {
+                openLogin();
+                return;
+              }
+              setIsDialogOpen(true);
+            }}
+            className="gap-2 w-full min-h-11"
+          >
+            <Plus className="w-5 h-5" /> Post session
+          </Button>
+        }
+      />
 
       {!user && (
-        <Card className="p-4 mb-6 border-dashed border-primary/20">
-          <p className="text-sm text-muted-foreground">
-            Posting and direct messages require login so you can receive replies in <span className="text-foreground font-semibold">Inbox</span>.
-            You can still browse posts in guest mode.
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 border-l-2 border-primary/50 pl-4 py-1">
+          <MessageCircle className="w-5 h-5 text-primary shrink-0 hidden sm:block" />
+          <p className="text-sm text-muted-foreground flex-1">
+            Browse posts as a guest. Sign in to post, reply, and get private messages in your{" "}
+            <Link href="/inbox" className="text-primary font-semibold hover:underline">
+              Inbox
+            </Link>
+            .
           </p>
-        </Card>
+        </div>
       )}
 
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-card rounded-xl animate-pulse" />)}
+      {user && (
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <Link href="/inbox">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Inbox className="w-4 h-4" />
+              Open inbox
+            </Button>
+          </Link>
         </div>
-      ) : posts?.length === 0 ? (
-        <Card className="p-8 sm:p-12 text-center border-dashed border-primary/20">
-          <User className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
+      )}
+
+      <div className="mb-8 flex flex-wrap items-center gap-4 sm:gap-6 border-b border-primary/15 pb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary/35 bg-primary/10 shadow-[0_0_16px_rgba(0,212,170,0.12)]">
+            <Users className="h-5 w-5 text-primary drop-shadow-[0_0_8px_rgba(0,212,170,0.55)]" />
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-widest text-primary/75">Open posts</p>
+            <p className="font-display text-2xl sm:text-3xl leading-tight tracking-wide tabular-nums">
+              <span className="text-primary">{posts.length}</span>
+              <span className="text-foreground/75"> active</span>
+            </p>
+          </div>
+        </div>
+        {posts.length > 0 && gymsInPosts.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            <Label htmlFor="gym-filter" className="text-xs uppercase tracking-widest text-muted-foreground mb-0">
+              Gym
+            </Label>
+            <Select
+              id="gym-filter"
+              className="min-w-[10rem] h-9 text-sm"
+              value={gymFilter === "all" ? "all" : String(gymFilter)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setGymFilter(v === "all" ? "all" : Number(v));
+              }}
+            >
+              <option value="all">All gyms</option>
+              {gymsInPosts.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-56 bg-card rounded-xl animate-pulse border border-card-border" />
+          ))}
+        </div>
+      ) : posts.length === 0 ? (
+        <Card className="p-8 sm:p-12 text-center border-dashed border-2 border-primary/20">
+          <Users className="w-16 h-16 text-primary mx-auto mb-4 opacity-50 drop-shadow-[0_0_8px_rgba(0,212,170,0.5)]" />
           <h3 className="text-xl sm:text-2xl font-display uppercase mb-2">No active posts</h3>
-          <p className="text-muted-foreground mb-6">Be the first to look for a partner.</p>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Be the first to post when and where you&apos;re climbing — others can reply or message you.
+          </p>
           <Button
             onClick={() => {
               if (!user) {
@@ -261,166 +372,244 @@ export default function PartnerFinder() {
               setIsDialogOpen(true);
             }}
           >
-            Create Post
+            Create post
           </Button>
         </Card>
+      ) : filteredPosts.length === 0 ? (
+        <Card className="p-8 text-center border-dashed border-primary/20">
+          <p className="text-muted-foreground">No posts at this gym. Try another filter or post one yourself.</p>
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {posts?.map(post => (
-            <Card key={post.id} className="p-6 relative overflow-hidden group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.1)] transition-all duration-300">
-              <div className="absolute top-0 left-0 w-2 h-full bg-primary/30 group-hover:bg-primary transition-colors duration-300 shadow-[0_0_10px_rgba(0,212,170,0.5)]" />
-              
-              <div className="flex justify-between items-start mb-4 pl-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-teal-950 flex items-center justify-center text-primary font-bold border border-primary/30 group-hover:border-primary transition-colors">
-                    {post.userName.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-foreground text-lg">{post.userName}</h3>
-                    <p className="text-xs text-muted-foreground">Posted {formatDate(post.createdAt)}</p>
-                  </div>
-                </div>
-                {user && post.userId === userId && (
-                  <button 
-                    onClick={() => deleteMutation.mutate({ id: post.id })}
-                    className="p-2 text-stone-500 hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+          {filteredPosts.map((post) => {
+            const replies = publicRepliesQuery.data?.[post.id] ?? [];
+            const replyCount = replies.length;
+            const isExpanded = Boolean(expandedReplies[post.id]);
+            const isOwnPost = user && post.userId === userId;
+            const description = post.message ? stripSurroundingQuotes(post.message) : "";
 
-              <div className="space-y-3 mb-6 bg-teal-950/20 p-4 rounded-lg border border-teal-900/30 pl-4 sm:pl-6 sm:ml-2">
-                <div className="flex items-center gap-2 text-stone-300">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  <span className="font-bold uppercase tracking-wider">{post.gymName}</span>
-                </div>
-                <div className="flex items-center gap-2 text-stone-300">
-                  <Calendar className="w-4 h-4 text-primary" />
-                  <span>{formatDate(post.sessionDate)} {post.sessionTime && `at ${post.sessionTime}`}</span>
-                </div>
-                <div className="flex items-center gap-2 text-stone-300">
-                  <Badge variant="warning">Grades: {post.gradeRange}</Badge>
-                </div>
-              </div>
-
-              {post.message && (
-                <p className="text-stone-400 italic pl-2 border-l-2 border-border mb-4">"{post.message}"</p>
-              )}
-
-              <div className="rounded-lg border border-border/70 bg-card/25 p-3 space-y-2">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Public replies</p>
-                {(publicRepliesQuery.data?.[post.id]?.length ?? 0) === 0 ? (
-                  <p className="text-sm text-muted-foreground">No replies yet.</p>
-                ) : (
-                  <div className="space-y-2 max-h-36 overflow-auto pr-1">
-                    {(publicRepliesQuery.data?.[post.id] ?? []).slice(0, 6).map((m) => (
-                      <div key={m.id} className="text-sm rounded-md border border-border/60 p-2 bg-background/30">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-foreground text-xs uppercase tracking-wider">{m.senderName}</span>
-                          <span className="text-[10px] text-muted-foreground">{formatDate(m.createdAt)}</span>
-                        </div>
-                        <p className="mt-1 text-muted-foreground whitespace-pre-wrap">{m.body}</p>
+            return (
+              <Card
+                key={post.id}
+                className="flex flex-col overflow-hidden group hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_24px_rgba(0,212,170,0.08)]"
+              >
+                <div className="p-5 sm:p-6 flex flex-col flex-1">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-11 h-11 shrink-0 rounded-full bg-primary/15 flex items-center justify-center text-primary font-display text-lg font-bold border border-primary/30">
+                        {post.userName.charAt(0).toUpperCase()}
                       </div>
-                    ))}
+                      <div className="min-w-0">
+                        <h3 className="font-display text-lg uppercase tracking-wide truncate">
+                          {post.userName}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Posted {formatDate(post.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                    {isOwnPost && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                        aria-label="Delete post"
+                        onClick={() => deleteMutation.mutate({ id: post.id })}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
-                )}
-                <div className="flex gap-2">
-                  <Input
-                    value={publicReplyDrafts[post.id] ?? ""}
-                    onChange={(e) =>
-                      setPublicReplyDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))
-                    }
-                    placeholder={user ? "Reply publicly..." : "Login to reply"}
-                    disabled={!user}
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      if (!user) {
-                        openLogin();
-                        return;
-                      }
-                      const body = (publicReplyDrafts[post.id] ?? "").trim();
-                      if (!body) return;
-                      sendPublicReplyMutation.mutate({ postId: post.id, body });
-                    }}
-                    disabled={!user || sendPublicReplyMutation.isPending}
-                  >
-                    Reply
-                  </Button>
+
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-900/50 bg-teal-950/60 px-3 py-1 text-xs font-medium text-teal-200">
+                      <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span className="truncate max-w-[14rem]">{post.gymName}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/30 px-3 py-1 text-xs text-foreground">
+                      <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                      {formatDate(post.sessionDate)}
+                    </span>
+                    {post.sessionTime && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/30 px-3 py-1 text-xs text-foreground">
+                        <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        {post.sessionTime}
+                      </span>
+                    )}
+                    <Badge variant="success" className="gap-1">
+                      <Mountain className="w-3 h-3" />
+                      {post.gradeRange}
+                    </Badge>
+                  </div>
+
+                  {description ? (
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-4 line-clamp-4">
+                      {description}
+                    </p>
+                  ) : null}
+
+                  <div className="mt-auto space-y-3">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        className="flex-1 gap-2"
+                        onClick={() => {
+                          if (!user) {
+                            openLogin();
+                            return;
+                          }
+                          if (isOwnPost) return;
+                          setActivePostId(post.id);
+                          setMessageDraft("");
+                          conversationQuery.mutate({
+                            postId: post.id,
+                            otherUserId: post.userId,
+                            otherUserName: post.userName,
+                          });
+                        }}
+                        disabled={!user || isOwnPost}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        {isOwnPost ? "Your post" : "Message privately"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2 shrink-0"
+                        onClick={() => toggleReplies(post.id)}
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                        {replyCount === 0 ? "Replies" : `${replyCount} repl${replyCount === 1 ? "y" : "ies"}`}
+                      </Button>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="rounded-lg border border-border/60 bg-muted/10 p-3 space-y-3">
+                        {replyCount === 0 ? (
+                          <p className="text-sm text-muted-foreground">No public replies yet.</p>
+                        ) : (
+                          <ul className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                            {replies.map((m) => (
+                              <li
+                                key={m.id}
+                                className="text-sm rounded-md border border-border/50 bg-background/40 p-2.5"
+                              >
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                  <span className="font-semibold text-xs uppercase tracking-wider text-foreground">
+                                    {m.senderName}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground shrink-0">
+                                    {formatDate(m.createdAt)}
+                                  </span>
+                                </div>
+                                <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                  {stripSurroundingQuotes(m.body)}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <div className="flex gap-2">
+                          <Input
+                            value={publicReplyDrafts[post.id] ?? ""}
+                            onChange={(e) =>
+                              setPublicReplyDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))
+                            }
+                            placeholder={user ? "Reply on this post…" : "Sign in to reply"}
+                            disabled={!user}
+                            className="text-sm"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (!user) {
+                                openLogin();
+                                return;
+                              }
+                              const body = (publicReplyDrafts[post.id] ?? "").trim();
+                              if (!body) return;
+                              sendPublicReplyMutation.mutate({ postId: post.id, body });
+                            }}
+                            disabled={!user || sendPublicReplyMutation.isPending}
+                          >
+                            Reply
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-              
-              <div className="mt-6">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    if (!user) {
-                      openLogin();
-                      return;
-                    }
-                    setActivePostId(post.id);
-                    setMessageDraft("");
-                    conversationQuery.mutate({
-                      postId: post.id,
-                      otherUserId: post.userId,
-                      otherUserName: post.userName,
-                    });
-                  }}
-                  disabled={!user}
-                >
-                  {!user ? "Login to message" : "Message"}
-                </Button>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} title="Find a Partner">
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} title="Post a session">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
             <Label>Gym</Label>
             <Select {...register("gymId")}>
-              <option value="">Select gym...</option>
-              {gyms?.map(g => (
-               <option key={g.id} value={g.id}>{g.name}</option>
+              <option value="">Select gym…</option>
+              {gyms?.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
               ))}
             </Select>
             {errors.gymId && <p className="text-destructive text-sm mt-1">{errors.gymId.message}</p>}
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Date</Label>
               <Input type="date" {...register("sessionDate")} />
-              {errors.sessionDate && <p className="text-destructive text-sm mt-1">{errors.sessionDate.message}</p>}
+              {errors.sessionDate && (
+                <p className="text-destructive text-sm mt-1">{errors.sessionDate.message}</p>
+              )}
             </div>
             <div>
-              <Label>Time (Optional)</Label>
+              <Label>Time (optional)</Label>
               <Input type="time" {...register("sessionTime")} />
             </div>
           </div>
 
           <div>
-            <Label>Grade Range</Label>
-            <Input placeholder="e.g. V3-V5, 6A-6C" {...register("gradeRange")} />
-            {errors.gradeRange && <p className="text-destructive text-sm mt-1">{errors.gradeRange.message}</p>}
+            <Label>Grade range</Label>
+            <div className="flex flex-wrap gap-2 mt-2 mb-2">
+              {GRADE_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  className="rounded-full border border-border px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
+                  onClick={() => setValue("gradeRange", preset, { shouldValidate: true })}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+            <Input placeholder="e.g. V3–V5, 6A–6C" {...register("gradeRange")} />
+            {errors.gradeRange && (
+              <p className="text-destructive text-sm mt-1">{errors.gradeRange.message}</p>
+            )}
           </div>
 
           <div>
             <Label>Message (optional)</Label>
             <Textarea
               className="mt-1"
-              placeholder="e.g. Looking for someone to project V4s, casual session…"
+              placeholder="Projecting V4s, need a belay, casual session…"
               {...register("message")}
             />
           </div>
-          
+
           <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Posting..." : "Post Session"}
+            {createMutation.isPending ? "Posting…" : "Post session"}
           </Button>
         </form>
       </Dialog>
@@ -433,60 +622,77 @@ export default function PartnerFinder() {
             setActiveConversationId(null);
           }
         }}
-        title="Messages"
+        title={
+          activeMessagingPost
+            ? `Message ${activeMessagingPost.userName}`
+            : "Private message"
+        }
       >
         <div className="space-y-4">
-          {conversationQuery.isPending ? (
-            <div className="text-sm text-muted-foreground">Opening conversation…</div>
-          ) : null}
+          {activeMessagingPost && (
+            <p className="text-sm text-muted-foreground -mt-2">
+              About their session at{" "}
+              <span className="text-foreground font-medium">{activeMessagingPost.gymName}</span>
+              {" · "}
+              {formatDate(activeMessagingPost.sessionDate)}
+              {activeMessagingPost.sessionTime ? ` at ${activeMessagingPost.sessionTime}` : ""}
+            </p>
+          )}
+
+          {conversationQuery.isPending && (
+            <p className="text-sm text-muted-foreground">Opening conversation…</p>
+          )}
+
           {messagesQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">Loading messages…</div>
+            <p className="text-sm text-muted-foreground">Loading messages…</p>
           ) : messagesQuery.isError ? (
-            <div className="text-sm text-destructive">
-              {(messagesQuery.error as Error).message}
-            </div>
+            <p className="text-sm text-destructive">{(messagesQuery.error as Error).message}</p>
           ) : (
-            <div className="max-h-[45vh] overflow-auto space-y-3 rounded-lg border border-border p-3 bg-card/30">
+            <div className="max-h-[40vh] overflow-y-auto space-y-2 rounded-lg border border-border/70 p-3 bg-muted/15">
               {(messagesQuery.data ?? []).length === 0 ? (
-                <div className="text-sm text-muted-foreground">No messages yet. Say hi.</div>
+                <p className="text-sm text-muted-foreground py-4 text-center">Say hi to start the chat.</p>
               ) : (
                 (messagesQuery.data ?? [])
                   .slice()
                   .reverse()
-                  .map((m) => (
-                    <div
-                      key={m.id}
-                      className={cn(
-                        "rounded-lg border border-border p-3",
-                        m.senderId === userId ? "bg-teal-950/20" : "bg-card/40",
-                      )}
-                    >
-                      <div className="flex items-baseline justify-between gap-3">
-                        <div className="font-semibold text-sm text-foreground truncate">
-                          {m.senderName}
-                        </div>
-                        <div className="text-xs text-muted-foreground shrink-0">
+                  .map((m) => {
+                    const isMine = m.senderId === userId;
+                    return (
+                      <div
+                        key={m.id}
+                        className={cn(
+                          "max-w-[92%] rounded-lg px-3 py-2 text-sm",
+                          isMine
+                            ? "ml-auto bg-primary/15 border border-primary/25"
+                            : "mr-auto bg-card/60 border border-border/60",
+                        )}
+                      >
+                        {!isMine && (
+                          <p className="text-[10px] uppercase tracking-wider font-semibold text-foreground mb-0.5">
+                            {m.senderName}
+                          </p>
+                        )}
+                        <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{m.body}</p>
+                        <p className="text-[10px] text-muted-foreground/80 mt-1 text-right">
                           {formatDate(m.createdAt)}
-                        </div>
+                        </p>
                       </div>
-                      <div className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
-                        {m.body}
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
               )}
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-2 pt-1 border-t border-border/60">
             <Label>Your message</Label>
             <Textarea
               value={messageDraft}
               onChange={(e) => setMessageDraft(e.target.value)}
               placeholder="Type a message…"
+              rows={3}
             />
             <Button
-              className="w-full"
+              className="w-full gap-2"
               onClick={() => {
                 if (activeConversationId == null) return;
                 const body = messageDraft.trim();
@@ -499,6 +705,14 @@ export default function PartnerFinder() {
             >
               {sendMessageMutation.isPending ? "Sending…" : "Send"}
             </Button>
+            {user && (
+              <p className="text-xs text-center text-muted-foreground">
+                All private chats also appear in{" "}
+                <Link href="/inbox" className="text-primary hover:underline">
+                  Inbox
+                </Link>
+              </p>
+            )}
           </div>
         </div>
       </Dialog>

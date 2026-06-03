@@ -1,4 +1,5 @@
 import { Layout } from "@/components/layout";
+import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui";
 import { useGetStats, getGetStatsQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/auth/AuthProvider";
@@ -79,12 +80,10 @@ export default function Progress() {
 
   return (
     <Layout>
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Progress</h1>
-        <p className="text-muted-foreground text-base sm:text-lg">
-          {user ? "Your climbing journey in numbers." : "Preview your progress dashboard."}
-        </p>
-      </div>
+      <PageHeader
+        title="Progress"
+        description={user ? "Your climbing journey in numbers." : "Preview your progress dashboard."}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <Card className="p-6 flex flex-col items-center justify-center text-center hover:-translate-y-1 transition-transform duration-300 hover:shadow-[0_0_15px_rgba(0,212,170,0.1)] hover:border-primary/30">

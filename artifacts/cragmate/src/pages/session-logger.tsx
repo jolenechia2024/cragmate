@@ -1,15 +1,22 @@
 import { Layout } from "@/components/layout";
+import { PageHeader } from "@/components/page-header";
 import { Card, Button, Dialog, Input, Label, Select, Textarea } from "@/components/ui";
-import { useListSessions, useCreateSession, useListGyms, getListSessionsQueryKey } from "@workspace/api-client-react";
-import { cn, formatDate } from "@/lib/utils";
+import {
+  useListSessions,
+  useCreateSession,
+  useListGyms,
+  useDeleteSession,
+  getListSessionsQueryKey,
+} from "@workspace/api-client-react";
+import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/auth/AuthProvider";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Calendar, Activity, Sparkles, Check } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Calendar, Activity, Check, Trash2, Pencil, Flame } from "lucide-react";
 import { getStreak, syncWeeklyStreakFromSessionDays } from "@/lib/streak";
 import { SessionMonthHeatmapCalendar, SessionMonthHeatmapSkeleton } from "@/components/session-month-calendar";
 
@@ -24,9 +31,14 @@ export default function SessionLogger() {
   const [, setLocation] = useLocation();
   const { userId, user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<{
+    id: number;
+    gymId: number;
+    date: string;
+    notes?: string;
+  } | null>(null);
   const [isClimbPreviewOpen, setIsClimbPreviewOpen] = useState(false);
   const [isGuestGuideOpen, setIsGuestGuideOpen] = useState(false);
-  const [showBeginnerSessionGuide, setShowBeginnerSessionGuide] = useState(false);
   const [previewSessionName, setPreviewSessionName] = useState<string>("Sample Gym");
   const [previewSessionDate, setPreviewSessionDate] = useState<string>(new Date().toISOString().split("T")[0]);
 
@@ -88,9 +100,10 @@ export default function SessionLogger() {
     () => [
       {
         id: 0,
+        gymId: 0,
         gymName: "Sample Gym",
         date: new Date().toISOString().split("T")[0],
-        notes: "",
+        notes: "Preview only — sign in to save real sessions.",
         climbCount: 8,
         topGrade: "V3",
       },
@@ -126,6 +139,48 @@ export default function SessionLogger() {
     );
   }, [user, isLoading, sessionDays]);
 
+  const deleteSessionMutation = useDeleteSession({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId }) });
+      },
+    },
+  });
+
+  const updateSessionMutation = useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: z.infer<typeof sessionSchema>;
+    }) => {
+      const token = (globalThis as { __CRAGMATE_SUPABASE_ACCESS_TOKEN__?: string })
+        .__CRAGMATE_SUPABASE_ACCESS_TOKEN__;
+      const res = await fetch(`/api/sessions/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          gymId: data.gymId,
+          date: data.date,
+          notes: data.notes?.trim() ?? "",
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? "Failed to update session");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getListSessionsQueryKey({ userId }) });
+      setEditingSession(null);
+    },
+  });
+
   const createMutation = useCreateSession({
     mutation: {
       onSuccess: (createdSession: { id?: number; date?: string } | undefined) => {
@@ -154,6 +209,26 @@ export default function SessionLogger() {
     }
   });
 
+  const {
+    register: registerEdit,
+    handleSubmit: handleSubmitEdit,
+    reset: resetEdit,
+    formState: { errors: editErrors },
+  } = useForm<z.infer<typeof sessionSchema>>({
+    resolver: zodResolver(sessionSchema),
+  });
+
+  useEffect(() => {
+    if (!editingSession) return;
+    resetEdit({
+      gymId: editingSession.gymId,
+      date: editingSession.date.includes("T")
+        ? editingSession.date.split("T")[0]
+        : editingSession.date,
+      notes: editingSession.notes ?? "",
+    });
+  }, [editingSession, resetEdit]);
+
   const onSubmit = (data: z.infer<typeof sessionSchema>) => {
     if (!user) {
       window.dispatchEvent(
@@ -168,61 +243,91 @@ export default function SessionLogger() {
     createMutation.mutate({ data: { ...data, notes: userNotes, userId } });
   };
 
+  function handleDeleteSession(sessionId: number, gymName: string) {
+    if (
+      !confirm(
+        `Delete your session at ${gymName}? All climbs logged in this session will be removed.`,
+      )
+    ) {
+      return;
+    }
+    deleteSessionMutation.mutate({ id: sessionId });
+  }
+
+  function promptLogin() {
+    window.dispatchEvent(
+      new CustomEvent("cragmate:open-auth", { detail: { mode: "login" as const } }),
+    );
+  }
+
+  function openLogClimb(session: { id: number; gymName: string; date: string }) {
+    if (isGuest) {
+      setPreviewSessionName(session.gymName);
+      setPreviewSessionDate(String(session.date));
+      setIsClimbPreviewOpen(true);
+      return;
+    }
+    setLocation(`/sessions/${session.id}?openClimb=1`);
+  }
+
+  function openEditSession(session: {
+    id: number;
+    gymId?: number;
+    date: string;
+    notes?: string;
+  }) {
+    if (isGuest) {
+      promptLogin();
+      return;
+    }
+    if (!session.gymId) return;
+    setEditingSession({
+      id: session.id,
+      gymId: session.gymId,
+      date: String(session.date),
+      notes: session.notes,
+    });
+  }
+
+  const onEditSubmit = (data: z.infer<typeof sessionSchema>) => {
+    if (!editingSession) return;
+    updateSessionMutation.mutate({ id: editingSession.id, data });
+  };
+
   return (
     <Layout>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 sm:mb-8 gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">Session Log</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Track your ascents and measure progress.</p>
-        </div>
-        <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full md:w-auto min-h-11 sm:min-h-12">
-          <Plus className="w-5 h-5" /> Log Session
-        </Button>
-      </div>
+      <PageHeader
+        title="Session Log"
+        description="Track your ascents and measure progress."
+        action={
+          <Button onClick={() => setIsDialogOpen(true)} className="gap-2 w-full min-h-11 sm:min-h-12">
+            <Plus className="w-5 h-5" /> Log Session
+          </Button>
+        }
+      />
 
-      <div className="mb-3">
-        <button
-          type="button"
-          className="text-xs sm:text-sm text-muted-foreground hover:text-primary transition-colors"
-          onClick={() => setShowBeginnerSessionGuide((v) => !v)}
+      <div className="mb-8 flex items-center gap-3 sm:gap-4 border-b border-primary/15 pb-6">
+        <div
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-primary/35 bg-primary/10 shadow-[0_0_16px_rgba(0,212,170,0.12)]"
+          aria-hidden
         >
-          {showBeginnerSessionGuide ? "Hide beginner session guide" : "Show beginner session guide"}
-        </button>
-      </div>
-      {showBeginnerSessionGuide ? (
-        <Card className="mb-6 p-4 border-primary/20 bg-card/60">
-          <div className="flex items-start gap-3">
-            <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-foreground">Beginner session guide</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Try VB-V2 first, keep rests long, and track confidence to spot patterns over time.
-              </p>
-            </div>
-          </div>
-        </Card>
-      ) : null}
-
-      <Card className="mb-6 p-4 border-primary/20 bg-card/60">
-        <div>
-          <div>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">Weekly streak</p>
-            <p className="font-display text-xl sm:text-2xl mt-1">
-              {streak} week{streak === 1 ? "" : "s"}
-            </p>
-            <p className="text-muted-foreground text-sm mt-1">
-              Consecutive calendar weeks (Mon–Sun), each with at least one session date in your log — counted backward from today.
-            </p>
-          </div>
+          <Flame className="h-5 w-5 text-primary drop-shadow-[0_0_8px_rgba(0,212,170,0.55)]" />
         </div>
-      </Card>
+        <div className="min-w-0">
+          <p className="text-xs uppercase tracking-widest text-primary/75">Weekly streak</p>
+          <p className="mt-1 font-display text-2xl sm:text-3xl leading-tight tracking-wide tabular-nums">
+            <span className="text-primary drop-shadow-[0_0_6px_rgba(0,212,170,0.35)]">{streak}</span>
+            <span className="text-foreground/75"> week{streak === 1 ? "" : "s"}</span>
+          </p>
+        </div>
+      </div>
 
       {isLoading ? (
         <>
           <SessionMonthHeatmapSkeleton />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-48 bg-card rounded-xl animate-pulse" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-48 bg-card rounded-xl animate-pulse border border-card-border" />
             ))}
           </div>
         </>
@@ -241,75 +346,89 @@ export default function SessionLogger() {
               <Button onClick={() => setIsDialogOpen(true)}>{isGuest ? "Try it" : "Start Logging"}</Button>
             </Card>
           ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayedSessions.map((session) => {
-            const CardEl = (
-              <Card
-                className="h-full hover:border-primary/80 transition-all duration-300 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] relative overflow-hidden"
-                onClick={() => {
-                  if (isGuest) {
-                    setPreviewSessionName(session.gymName);
-                    setPreviewSessionDate(String(session.date));
-                    setIsClimbPreviewOpen(true);
-                  } else {
-                    setLocation(`/sessions/${session.id}`);
-                  }
-                }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                <div className="p-6 flex flex-col h-full relative z-10">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-2xl font-bold font-display uppercase tracking-wider group-hover:text-primary transition-colors drop-shadow-sm">
-                      {session.gymName}
-                    </h3>
-                    <span className="bg-teal-950 border border-teal-900/50 text-teal-300 text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 shadow-sm">
-                      <Calendar className="w-3 h-3" /> {formatDate(session.date)}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displayedSessions.map((session) => (
+                <Card
+                  key={session.id}
+                  className="h-full group hover:border-primary/80 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_20px_rgba(0,212,170,0.15)] relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  <div className="p-6 flex flex-col h-full relative z-10">
+                    <div className="flex items-start gap-2 mb-3">
+                      <h3 className="flex-1 min-w-0 text-xl font-bold font-display uppercase tracking-wider group-hover:text-primary transition-colors leading-tight">
+                        {session.gymName}
+                      </h3>
+                      <div className="flex items-center gap-0.5 shrink-0 -mt-0.5 -mr-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          aria-label="Edit session"
+                          onClick={() => openEditSession(session)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          aria-label="Delete session"
+                          disabled={!isGuest && deleteSessionMutation.isPending}
+                          onClick={() => {
+                            if (isGuest) {
+                              promptLogin();
+                              return;
+                            }
+                            handleDeleteSession(session.id, session.gymName);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <span className="inline-flex w-fit items-center gap-1.5 bg-teal-950/80 border border-teal-900/50 text-teal-300 text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap mb-4">
+                      <Calendar className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                      <time dateTime={String(session.date)}>{formatDate(String(session.date))}</time>
                     </span>
-                  </div>
 
-                  {session.notes && (
-                    <p className="text-muted-foreground text-sm mb-6 line-clamp-2 italic">"{session.notes}"</p>
-                  )}
-
-                  <div className="mt-auto grid grid-cols-2 gap-4 border-t border-border pt-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Total Climbs</p>
-                      <p className="text-2xl font-display">{session.climbCount}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Top Grade</p>
-                      <p className="text-2xl font-display text-primary drop-shadow-[0_0_5px_rgba(0,212,170,0.3)]">
-                        {session.topGrade || "N/A"}
+                    {session.notes ? (
+                      <p className="text-muted-foreground text-sm mb-6 line-clamp-2 leading-relaxed">
+                        {session.notes}
                       </p>
+                    ) : null}
+
+                    <div className="mt-auto grid grid-cols-2 gap-4 border-t border-border pt-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+                          Total Climbs
+                        </p>
+                        <p className="text-2xl font-display">{session.climbCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+                          Top Grade
+                        </p>
+                        <p className="text-2xl font-display text-primary drop-shadow-[0_0_5px_rgba(0,212,170,0.3)]">
+                          {session.topGrade || "N/A"}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-4">
+
                     <Button
                       size="sm"
                       variant={isGuest ? "outline" : "primary"}
-                      className="w-full"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (isGuest) {
-                          setPreviewSessionName(session.gymName);
-                          setPreviewSessionDate(String(session.date));
-                          setIsClimbPreviewOpen(true);
-                          return;
-                        }
-                        setLocation(`/sessions/${session.id}?openClimb=1`);
-                      }}
+                      className="w-full mt-4"
+                      onClick={() => openLogClimb(session)}
                     >
                       Log Climb
                     </Button>
                   </div>
-                </div>
-              </Card>
-            );
-
-            return <div key={session.id}>{CardEl}</div>;
-          })}
-        </div>
+                </Card>
+              ))}
+            </div>
           )}
         </>
       )}
@@ -347,6 +466,58 @@ export default function SessionLogger() {
               You can fill this in, but you must sign in to save.
             </p>
           ) : null}
+        </form>
+      </Dialog>
+
+      <Dialog
+        open={editingSession !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingSession(null);
+        }}
+        title="Edit session"
+      >
+        <form onSubmit={handleSubmitEdit(onEditSubmit)} className="space-y-6">
+          <div>
+            <Label>Gym</Label>
+            <Select {...registerEdit("gymId")}>
+              <option value="">Select a gym</option>
+              {gyms?.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </Select>
+            {editErrors.gymId && (
+              <p className="text-destructive text-sm mt-1">{editErrors.gymId.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label>Date</Label>
+            <Input type="date" {...registerEdit("date")} />
+            {editErrors.date && (
+              <p className="text-destructive text-sm mt-1">{editErrors.date.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label>Notes (optional)</Label>
+            <Textarea placeholder="Session notes..." {...registerEdit("notes")} />
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => setEditingSession(null)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1" disabled={updateSessionMutation.isPending}>
+              {updateSessionMutation.isPending ? "Saving..." : "Save changes"}
+            </Button>
+          </div>
         </form>
       </Dialog>
 

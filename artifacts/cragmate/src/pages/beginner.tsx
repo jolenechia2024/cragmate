@@ -1,4 +1,5 @@
 import { Layout } from "@/components/layout";
+import { PageHeader } from "@/components/page-header";
 import { Card, Button, Input } from "@/components/ui";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Link } from "wouter";
@@ -15,12 +16,8 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { askBeginnerCoach } from "@/lib/ai-api";
 import { cn } from "@/lib/utils";
-
-type HoldType = {
-  id: "jug" | "crimp-edge" | "sloper" | "pinch" | "pocket" | "sidepull" | "undercling" | "gaston" | "volume";
-  name: string;
-  tip: string;
-};
+import { HOLD_TYPES, type HoldTypeId } from "@/lib/hold-types";
+import { HoldTypeDetail } from "@/components/hold-type-display";
 
 const SECTION_TRIGGER =
   "text-xl sm:text-2xl font-display uppercase tracking-wider text-foreground hover:no-underline py-5 sm:py-6";
@@ -31,18 +28,6 @@ const CHECKLIST = [
   { icon: Mountain, label: "Start easy", detail: "VB–V2 or gym greens" },
   { icon: StretchHorizontal, label: "Cool down", detail: "Light stretch after" },
 ] as const;
-
-const HOLD_TYPES: HoldType[] = [
-  { id: "jug", name: "Jug", tip: "Big hold — rest here when you need a breath." },
-  { id: "crimp-edge", name: "Crimp", tip: "Thin edge — push with your feet so fingers last longer." },
-  { id: "sloper", name: "Sloper", tip: "Round hold — hips in, press down through your palms." },
-  { id: "pinch", name: "Pinch", tip: "Squeeze thumb + fingers — stay tight in your core." },
-  { id: "pocket", name: "Pocket", tip: "Hole for 1–3 fingers — load slowly, don't yank." },
-  { id: "sidepull", name: "Sidepull", tip: "Pull sideways — lean the other way and use your feet." },
-  { id: "undercling", name: "Undercling", tip: "Hold from below — stand up through your legs." },
-  { id: "gaston", name: "Gaston", tip: "Push outward — elbow out, body tension on." },
-  { id: "volume", name: "Volume", tip: "Big shape on the wall — climb the whole surface." },
-];
 
 const QUICK_TIPS = [
   { title: "Quiet feet", body: "Place feet before you pull. Rushed feet cause most beginner falls." },
@@ -92,7 +77,7 @@ function BeginnerCoach({ holdTypeName }: { holdTypeName: string }) {
     }
   }
 
-  return (
+    return (
     <Card className="mb-8 sm:mb-10 p-4 sm:p-6 border-primary/30 bg-card">
       <h2 className="text-xl sm:text-2xl font-display uppercase tracking-wider text-foreground mb-4">
         Cragmate AI Coach
@@ -162,19 +147,15 @@ function BeginnerCoach({ holdTypeName }: { holdTypeName: string }) {
 }
 
 export default function Beginner() {
-  const [activeHoldId, setActiveHoldId] = useState<HoldType["id"]>("jug");
+  const [activeHoldId, setActiveHoldId] = useState<HoldTypeId>("jug");
   const activeHold = HOLD_TYPES.find((h) => h.id === activeHoldId) ?? HOLD_TYPES[0]!;
 
   return (
     <Layout>
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-widest mb-2">
-          Beginner guide
-        </h1>
-        <p className="text-muted-foreground text-sm sm:text-base">
-          First bouldering session in Singapore — start here.
-        </p>
-      </div>
+      <PageHeader
+        title="Beginner guide"
+        description="First bouldering session in Singapore — start here."
+      />
 
       <BeginnerCoach holdTypeName={activeHold.name} />
 
@@ -183,7 +164,7 @@ export default function Beginner() {
       </p>
 
       <Card className="overflow-hidden border-border/80">
-        <Accordion type="multiple" defaultValue={["first-visit"]} className="w-full">
+        <Accordion type="multiple" defaultValue={["first-visit", "hold-types"]} className="w-full">
           <AccordionItem value="first-visit" className="border-border px-4 sm:px-6">
             <AccordionTrigger className={SECTION_TRIGGER}>
               <span className="inline-flex items-center gap-2 sm:gap-3">
@@ -200,24 +181,24 @@ export default function Beginner() {
                       <div className="flex items-center gap-2 mt-2 mb-1">
                         <step.icon className="w-4 h-4 text-primary shrink-0" />
                         <span className="font-semibold text-foreground text-sm sm:text-base">{step.label}</span>
-                      </div>
+                </div>
                       <p className="text-sm leading-relaxed">{step.detail}</p>
-                    </div>
+              </div>
                   </li>
                 ))}
               </ol>
               <div className="flex flex-col sm:flex-row gap-3 mt-5">
                 <Link href="/sessions">
                   <Button className="w-full sm:w-auto">Log a session</Button>
-                </Link>
+              </Link>
                 <Link href="/gyms?beginners=1">
                   <Button variant="outline" className="w-full sm:w-auto">
                     Find beginner gyms
-                  </Button>
-                </Link>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+                </Button>
+              </Link>
+            </div>
+              </AccordionContent>
+            </AccordionItem>
 
           <AccordionItem value="hold-types" className="border-border px-4 sm:px-6">
             <AccordionTrigger className={SECTION_TRIGGER}>
@@ -246,10 +227,7 @@ export default function Beginner() {
                 ))}
               </div>
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 sm:p-5">
-                <p className="font-display text-lg sm:text-xl uppercase tracking-wide text-foreground mb-1">
-                  {activeHold.name}
-                </p>
-                <p className="leading-relaxed">{activeHold.tip}</p>
+                <HoldTypeDetail holdId={activeHoldId} hold={activeHold} />
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -286,7 +264,7 @@ export default function Beginner() {
                   <div key={item.term} className="px-4 py-3 flex gap-4 sm:gap-6 bg-background/35">
                     <span className="font-semibold text-primary w-20 shrink-0">{item.term}</span>
                     <span className="leading-relaxed">{item.meaning}</span>
-                  </div>
+                </div>
                 ))}
               </div>
             </AccordionContent>
